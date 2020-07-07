@@ -116,6 +116,7 @@ class BouncePixelEnv(gym.Env):
         os.environ['SDL_VIDEODRIVER'] = 'dummy'
 
         self.num_envs = 1
+        self.viewer = None
 
         self.program = program
 
@@ -136,7 +137,11 @@ class BouncePixelEnv(gym.Env):
 
         prev_score = self.bounce.score_board.own
         prev_oppo_score = self.bounce.score_board.opponent
-        self.bounce.act(action)
+
+        # map action into key
+        action_key = self.bounce.action_set[action]
+
+        self.bounce.act(action_key)
 
         score = self.bounce.score_board.own
         oppo_score = self.bounce.score_board.opponent
@@ -178,6 +183,13 @@ class BouncePixelEnv(gym.Env):
             self.viewer.imshow(img)
             return self.viewer.isopen
 
+    def render_obs(self, obs):
+        from gym.envs.classic_control import rendering
+        if self.viewer is None:
+            self.viewer = rendering.SimpleImageViewer()
+        self.viewer.imshow(obs)
+        return self.viewer.isopen
+
     def close(self):
         return
 
@@ -210,12 +222,15 @@ def convert_np_to_video(frames_name, output_video_name):
 if __name__ == '__main__':
     # use "numpy_to_mp4.py" to turn numpy to actual mp4
 
-    # program = Program()
-    # program.set_correct()
+    program = Program()
+    program.set_correct()
     # program.set_correct_with_theme()
     # program.load("../envs/bounce_programs/demo1.json")
-    # app = Bounce(program)
-    # app.run()
+    app = Bounce(program)
+    app.run()
+
+    import sys
+    sys.exit(0)
 
     # record videos, and then convert them!
     program = Program()

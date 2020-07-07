@@ -7,3 +7,29 @@
 `train`: put RL-specific training in there
 
 `video`: put video-related training in there
+
+# Installation
+
+`pip install -r requirements.txt`
+
+If encounter OpenCV error:
+
+`sudo apt install libsm6 libxext6 libxrender-dev`
+
+Then:
+
+`pip install -e .`
+
+Run:
+
+`python autograde/train/train_pixel_agent.py`
+
+# Tensorboard
+
+`tensorboard --logdir ./tensorboard_first_test_log/`
+
+# Caution
+
+1. GrayScale + FrameStack is needed for non-recurrent policy (it squashes RGB 3 channels into 1 channel, and framestack extends that dimension to N).
+There currently is a weird problem in Grayscale where the output image is skewed.
+2. ReSize wrapper is enough for recurrent policy.

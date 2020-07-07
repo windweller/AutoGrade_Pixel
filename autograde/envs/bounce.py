@@ -988,6 +988,8 @@ class Bounce(object):
 
         self.action_set = [pygame.K_RIGHT, pygame.K_LEFT]
 
+        self.fresh_run = True
+
     def sync_sprite(self):
         for o in self.all_objs:
             o.sync_sprite()
@@ -1051,7 +1053,11 @@ class Bounce(object):
         return keys
 
     def act(self, action):
-        self.when_run_execute()
+        assert action in self.action_set, "need to supply correct action command: {}".format(self.action_set)
+
+        if self.fresh_run:
+            self.when_run_execute()
+            self.fresh_run = False
 
         self.paddle.stop_moving()  # always stop paddle running at first
 
