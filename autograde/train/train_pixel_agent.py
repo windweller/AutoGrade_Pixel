@@ -62,6 +62,7 @@ def main():
         checkpoint_callback = CheckpointCallback(save_freq=10000, save_path="./saved_models/first_test/",
                                                  name_prefix="ppo2_cnn_lstm_default")
 
+        # TODO: we can go back to nminibatches=1 training...
         model = PPO2(CnnLstmPolicy, env, verbose=1, nminibatches=4, tensorboard_log="./tensorboard_first_test_log/")
 
         model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
@@ -94,6 +95,8 @@ def test_observations():
         # env.render()
         obs = obs.squeeze(0)
         viewer.imshow(obs)
+        if rewards[0] != 0:
+            print(rewards)
     env.close()
 
 if __name__ == '__main__':

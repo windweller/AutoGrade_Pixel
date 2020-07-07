@@ -161,7 +161,7 @@ class BouncePixelEnv(gym.Env):
             # -10 vs. 20, we care more about goal than to catch the ball
             assert reward in {20, -10, 0}  # highest reward is 100
         else:
-            reward = score_diff * 2  # we only care about sending the ball in; each ball in is 1 point
+            reward = score_diff * 20  # we only care about sending the ball in; each ball in is 1 point
             # full points: 100
 
         # TODO: add reward shaping if training fails, to a wrapper, but should give out object information
