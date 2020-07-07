@@ -32,7 +32,7 @@ def define_physical_observation_space(shape=(3,)):
     return spaces.Box(low=-np.inf, high=np.inf, shape=shape, dtype=np.float)
 
 
-class BounceRecording(gym.Env):
+class BounceHumanPlayRecording(gym.Env):
     def __init__(self, program: Program, recording_dir=None):
         self.program = program
 
@@ -165,7 +165,13 @@ class BouncePixelEnv(gym.Env):
             reward = score_diff * 20  # we only care about sending the ball in; each ball in is 1 point
             # full points: 100
 
-        # TODO: add reward shaping if training fails, to a wrapper, but should give out object information
+        # Win everything: 200
+        # Lose everything: -150
+        if done and score == 5:
+            reward += 120  # + 100
+        elif done and oppo_score == 5:
+            reward -= 110  # - 100
+
         return self.get_image(), reward, done, {"score": score, "oppo_score": oppo_score}
 
     def reset(self):

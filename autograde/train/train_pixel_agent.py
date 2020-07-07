@@ -59,15 +59,17 @@ def main():
 
     with tf.Session(config=config):
 
-        checkpoint_callback = CheckpointCallback(save_freq=10000, save_path="./saved_models/first_test/",
+        checkpoint_callback = CheckpointCallback(save_freq=10000, save_path="./saved_models/self_minus_finish_reward/",
                                                  name_prefix="ppo2_cnn_lstm_default")
 
         # TODO: we can go back to nminibatches=1 training...
-        model = PPO2(CnnLstmPolicy, env, verbose=1, nminibatches=4, tensorboard_log="./tensorboard_first_test_log/")
+        model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.999,
+                     verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_log/")
 
-        model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
+        # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
+        model.learn(total_timesteps=1000 * 10000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
 
-        model.save("./saved_models/ppo2_cnn_lstm_default_final")
+        model.save("./saved_models/ppo2_cnn_lstm_better_reward_final")
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
