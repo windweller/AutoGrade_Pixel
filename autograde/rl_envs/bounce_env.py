@@ -108,7 +108,7 @@ class BouncePixelEnv(gym.Env):
     """
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    def __init__(self, program: Program, reward_type):
+    def __init__(self, program: Program, reward_type, reward_shaping=True):
 
         assert reward_type in {ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO}
         self.reward_type = reward_type
@@ -117,6 +117,7 @@ class BouncePixelEnv(gym.Env):
 
         self.num_envs = 1
         self.viewer = None
+        self.reward_shaping = reward_shaping
 
         self.program = program
 

@@ -10,7 +10,7 @@ from stable_baselines.common.callbacks import CallbackList, EvalCallback, Checkp
 from stable_baselines.common.policies import CnnLstmPolicy
 from stable_baselines.common.evaluation import evaluate_policy
 
-from autograde.rl_envs.bounce_env import BouncePixelEnv, Program, ONLY_SELF_SCORE
+from autograde.rl_envs.bounce_env import BouncePixelEnv, Program, ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO
 from autograde.rl_envs.wrappers import ResizeFrame
 
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
@@ -50,7 +50,7 @@ def main():
     program = Program()
     program.set_correct()
 
-    env = make_general_env(program, 1, 8, ONLY_SELF_SCORE)
+    env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO)
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True  # pylint: disable=E1101
@@ -71,7 +71,7 @@ def main():
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
-        single_env = make_general_env(program, 1, 1, ONLY_SELF_SCORE)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO)
         mean_reward, std_reward = evaluate_policy(model, single_env, n_eval_episodes=10)
         print("final model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
