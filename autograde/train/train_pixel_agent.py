@@ -50,7 +50,7 @@ def main():
     program = Program()
     program.set_correct()
 
-    env = make_general_env(program, 4, 2, ONLY_SELF_SCORE)
+    env = make_general_env(program, 1, 8, ONLY_SELF_SCORE)
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True  # pylint: disable=E1101
@@ -70,7 +70,7 @@ def main():
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
-        single_env = make_general_env(program, 1, 8, ONLY_SELF_SCORE)
+        single_env = make_general_env(program, 1, 1, ONLY_SELF_SCORE)
         mean_reward, std_reward = evaluate_policy(model, single_env, n_eval_episodes=10)
         print("final model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
