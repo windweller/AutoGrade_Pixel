@@ -1,2 +1,8 @@
 stable_baselines
-gym
+gym==0.14.0
+tensorflow==1.8.0
+jupyterlab
+pymunk
+pygame
+pillow
+opencv-python
