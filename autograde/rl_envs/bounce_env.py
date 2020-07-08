@@ -180,6 +180,9 @@ class BouncePixelEnv(gym.Env):
             x, y = curr_ball.body.position
             if y <= 400 and x >= 0 and x <= 400: # flying off the screen on top (through the goal)
                 dist_to_goal = np.sqrt((400-y) * (400-y) + (x-200) * (x-200))
+                dist_to_goal /= 60  # SCALE = 30, then / 2)
+                dist_to_goal /= 50  # FPS (1 sec)
+                # dist_to_goal = max(dist_to_goal, -5)
             else:
                 dist_to_goal = 0
 
