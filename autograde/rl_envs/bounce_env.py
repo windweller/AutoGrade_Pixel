@@ -176,7 +176,7 @@ class BouncePixelEnv(gym.Env):
         # it's only ON when there's only one ball, it's defined as the distance between ball to goal
         if self.reward_shaping:
             assert len(self.bounce.ball_group.exist_balls) == 1, "reward shaping is only for 1 ball situation during training"
-            curr_ball = list(self.bounce.ball_group.exist_balls)[0]
+            curr_ball = list(self.bounce.ball_group.exist_balls.values())[0]
             x, y = curr_ball.body.position
             if y <= 400 and x >= 0 and x <= 400: # flying off the screen on top (through the goal)
                 dist_to_goal = np.sqrt((400-y) * (400-y) + (x-200) * (x-200))
