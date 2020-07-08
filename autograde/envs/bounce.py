@@ -433,6 +433,8 @@ class BallGroup(object):
         # the PyMunk object is deleted in Controller already
 
         # there are scenarios where we are destroying balls that should already be gone!
+        # TODO: hmmm, wrong, so after 10 balls, no new balls? I guess for a 5:5 game, this works out
+        # TODO: but logic is wrong here
         if id in self.exist_balls:
             self.balls[id].destroy_sprite()
             del self.exist_balls[id]
