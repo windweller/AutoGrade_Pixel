@@ -73,7 +73,7 @@ def main():
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
-        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO)
+        single_env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO)
         mean_reward, std_reward = evaluate_policy(model, single_env, n_eval_episodes=10)
         print("final model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
