@@ -168,9 +168,9 @@ class BouncePixelEnv(gym.Env):
         # Win everything: 200
         # Lose everything: -150
         if done and score == 5:
-            reward += 120  # + 100
+            reward += 100  # + 120  (120 + 80 = 200)
         elif done and oppo_score == 5:
-            reward -= 110  # - 100
+            reward -= 100  # - 110 (-40 - 110 = -150)
 
         return self.get_image(), reward, done, {"score": score, "oppo_score": oppo_score}
 
