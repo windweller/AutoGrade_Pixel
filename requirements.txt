@@ -6,3 +6,4 @@ pymunk
 pygame
 pillow
 opencv-python
+matplotlib

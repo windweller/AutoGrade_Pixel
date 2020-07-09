@@ -71,6 +71,8 @@ def greyscale(state):
     (400, 400, 3)
     ValueError: cannot reshape array of size 480000 into shape (210,160,3)
 
+    100800 (200x200x3)
+
     """
     # state = np.reshape(state, [210, 160, 3]).astype(np.float32)
     state = np.reshape(state, [400, 400, 3]).astype(np.float32)
@@ -80,7 +82,8 @@ def greyscale(state):
 
     # karpathy
     # state = state[35:195]  # crop
-    state = state[::2, ::2]  # downsample by factor of 2
+    # state = state[::2, ::2]  # downsample by factor of 2
+    state = state[::4, ::4]  # downsample by factor of 4
 
     state = state[:, :, np.newaxis]
 
@@ -567,7 +570,7 @@ class QN(object):
         env = gym.make(self.config.env_name)
         env = gym.wrappers.Monitor(env, self.config.record_path, video_callable=lambda x: True, resume=True)
         env = MaxAndSkipEnv(env, skip=self.config.skip_frame)
-        env = PreproWrapper(env, prepro=greyscale, shape=(80, 80, 1),
+        env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1), # (80, 80, 1),
                             overwrite_render=self.config.overwrite_render)
         self.evaluate(env, 1)
 
@@ -1149,7 +1152,7 @@ if __name__ == '__main__':
 
     env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False)
     env = MaxAndSkipEnv(env, skip=4)
-    env = PreproWrapper(env, prepro=greyscale, shape=(80, 80, 1),
+    env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1), # (80, 80, 1),
                         overwrite_render=True)
 
     # exploration strategy
