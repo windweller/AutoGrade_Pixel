@@ -113,7 +113,7 @@ class GrayScaleFrame(gym.ObservationWrapper):
 #         return obs
 
 
-def get_env_fn(program, reward_type, reward_shaping):
+def get_env_fn(program, reward_type, reward_shaping, max_skip):
     # we add all necessary wrapper here
     def make_env():
         env = BouncePixelEnv(program, reward_type, reward_shaping)
@@ -121,6 +121,7 @@ def get_env_fn(program, reward_type, reward_shaping):
         # env = ScaledFloatFrame(env)
         env = ResizeFrame(env)
         env = GrayScaleFrame(env)
+        env = MaxAndSkipEnv(env, skip=max_skip)
         # env = ScaledFloatFrame(env)
         return env
 
@@ -128,7 +129,7 @@ def get_env_fn(program, reward_type, reward_shaping):
 
 
 def make_general_env(program, max_skip, num_envs, reward_type, reward_shaping, vectorized=True):
-    base_env_fn = get_env_fn(program, reward_type, reward_shaping)
+    base_env_fn = get_env_fn(program, reward_type, reward_shaping, max_skip)
 
     if num_envs > 1:
         env = SubprocVecEnv([base_env_fn for _ in range(num_envs)])
@@ -137,9 +138,6 @@ def make_general_env(program, max_skip, num_envs, reward_type, reward_shaping, v
             env = DummyVecEnv([base_env_fn])
         else:
             env = base_env_fn()
-
-    if max_skip > 1:
-        env = MaxAndSkipEnv(env, skip=max_skip)
 
     return env
 
