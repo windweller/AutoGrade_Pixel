@@ -189,6 +189,9 @@ class BouncePixelEnv(gym.Env):
             dist_reward = -dist_to_goal
             reward += dist_reward
 
+        # make reward a bit smaller...
+        reward /= 10
+
         return self.get_image(), reward, done, {"score": score, "oppo_score": oppo_score}
 
     def reset(self):
