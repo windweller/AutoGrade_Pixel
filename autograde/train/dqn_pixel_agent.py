@@ -173,6 +173,7 @@ def main():
 
     # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
     env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+    print("Number of environments: {}".format(env.num_envs))
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True  # pylint: disable=E1101
