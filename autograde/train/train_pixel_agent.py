@@ -105,7 +105,7 @@ def test_observations():
     env.close()
 
 if __name__ == '__main__':
-    # main()
+    main()
 
     # ====== Some rough testing code =====
     # program = Program()
@@ -132,4 +132,6 @@ if __name__ == '__main__':
     # print(obs.shape)
     # env.close()
 
-    test_observations()
+    # test_observations()
+
+    # Try Skimage GrayScale, try to make Pyglet display correct things (send in the right data)

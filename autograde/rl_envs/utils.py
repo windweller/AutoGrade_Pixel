@@ -19,6 +19,7 @@ except ImportError as e:
     ''')
 
 import sys
+import PIL
 
 class SmartImageViewer(object):
     def __init__(self, display=None, maxwidth=500, mode='RGB'):
@@ -55,7 +56,7 @@ class SmartImageViewer(object):
             image = pyglet.image.ImageData(arr.shape[1], arr.shape[0],
                 'RGB', arr.tobytes(), pitch=arr.shape[1]*-3)
         else:
-            image = pyglet.image.ImageData(arr.shape[1], arr.shape[0], 'L', arr.tobytes(), pitch=arr.shape[1]*-3)
+            image = pyglet.image.ImageData(arr.shape[1], arr.shape[0], 'L', arr.tobytes())  # pitch=arr.shape[1]*-3
 
         gl.glTexParameteri(gl.GL_TEXTURE_2D,
             gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
