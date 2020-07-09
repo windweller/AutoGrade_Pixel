@@ -1148,6 +1148,7 @@ class config():
 if __name__ == '__main__':
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    os.environ['SDL_AUDIODRIVER'] = 'dsp'
 
     config = config()
 
