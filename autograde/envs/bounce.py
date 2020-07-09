@@ -1084,7 +1084,8 @@ class Bounce(object):
         self.sync_sprite()
         self.all_sprites.draw(self.screen)
 
-        self.clock.tick(fps)
+        # Note: we no longer need to sleep/wait for the actual world clock
+        # self.clock.tick(fps)
         self.space.step(1 / fps)
 
         pygame.display.flip()
