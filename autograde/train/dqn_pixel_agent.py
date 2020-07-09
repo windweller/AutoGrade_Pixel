@@ -7,13 +7,11 @@ import gym
 import argparse
 import tensorflow as tf
 from stable_baselines import DQN
-from stable_baselines.common.vec_env import VecFrameStack, DummyVecEnv
-from stable_baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from stable_baselines.common.atari_wrappers import ScaledFloatFrame, WarpFrame, MaxAndSkipEnv
 
 from stable_baselines.common.callbacks import CallbackList, EvalCallback, CheckpointCallback, \
     StopTrainingOnRewardThreshold
-from stable_baselines.common.policies import CnnPolicy
+from stable_baselines.deepq.policies import CnnPolicy
 from stable_baselines.common.evaluation import evaluate_policy
 
 from autograde.rl_envs.bounce_env import BouncePixelEnv, Program, ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO
@@ -131,13 +129,15 @@ def get_env_fn(program, reward_type, reward_shaping, max_skip):
 def make_general_env(program, max_skip, num_envs, reward_type, reward_shaping, vectorized=True):
     base_env_fn = get_env_fn(program, reward_type, reward_shaping, max_skip)
 
-    if num_envs > 1:
-        env = SubprocVecEnv([base_env_fn for _ in range(num_envs)])
-    else:
-        if vectorized:
-            env = DummyVecEnv([base_env_fn])
-        else:
-            env = base_env_fn()
+    # if num_envs > 1:
+    #     env = SubprocVecEnv([base_env_fn for _ in range(num_envs)])
+    # else:
+    #     if vectorized:
+    #         env = DummyVecEnv([base_env_fn])
+    #     else:
+    #         env = base_env_fn()
+
+    env = base_env_fn()
 
     return env
 
@@ -170,7 +170,7 @@ def main():
     program.set_correct()
 
     # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
-    env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+    env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False)
     print("Number of environments: {}".format(env.num_envs))
 
     config = tf.ConfigProto()
@@ -180,7 +180,7 @@ def main():
 
     with tf.Session(config=config):
 
-        checkpoint_callback = CheckpointCallback(save_freq=10000, save_path="./saved_models/dqn_self_minus_finish_reward/",
+        checkpoint_callback = CheckpointCallback(save_freq=100000, save_path="./saved_models/dqn_self_minus_finish_reward/",
                                                  name_prefix="DQN_Nature_CNN_default")
 
         model = DQN(CnnPolicy, env, learning_rate=5e-4, gamma=0.99, buffer_size=1000000, target_network_update_freq=10000,
