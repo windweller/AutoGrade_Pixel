@@ -183,16 +183,17 @@ def main():
         checkpoint_callback = CheckpointCallback(save_freq=100000, save_path="./saved_models/dqn_self_minus_finish_reward/",
                                                  name_prefix="DQN_Nature_CNN_default")
 
-        # 1000000
         model = DQN(CnnPolicy, env, learning_rate=5e-4, gamma=0.99, buffer_size=50000, target_network_update_freq=10000,
                     learning_starts=50000, train_freq=4,
                     prioritized_replay=True,
                     verbose=1, tensorboard_log="./tensorboard_dqn_self_minus_finish_reward_log/")
 
-        # single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, vectorized=False)
-        # mean_reward, std_reward = evaluate_policy(model, single_env, n_eval_episodes=10)
-        # print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
+        print("Evaluating initial performance...")
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, vectorized=False)
+        mean_reward, std_reward = evaluate_policy(model, single_env, n_eval_episodes=10)
+        print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
+        print("Training starts!")
         model.learn(total_timesteps=1000 * 10000, callback=CallbackList([checkpoint_callback]), tb_log_name='DQN-Nature-CNN') # 10M
 
         model.save("./saved_models/dqn_self_minus_finish_reward")
