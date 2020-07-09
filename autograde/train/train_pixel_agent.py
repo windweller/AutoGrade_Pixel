@@ -4,7 +4,7 @@ import tensorflow as tf
 from stable_baselines import PPO2
 from stable_baselines.common.vec_env import VecFrameStack, DummyVecEnv
 from stable_baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
-from stable_baselines.common.atari_wrappers import ScaledFloatFrame
+from stable_baselines.common.atari_wrappers import ScaledFloatFrame, WarpFrame
 
 from stable_baselines.common.callbacks import CallbackList, EvalCallback, CheckpointCallback, StopTrainingOnRewardThreshold
 from stable_baselines.common.policies import CnnLstmPolicy
@@ -74,7 +74,9 @@ def main():
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
-        single_env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+        # AssertionError: You must pass only one environment when using this function
+        # But then, the NN is expecting shape of (8, ...)
         mean_reward, std_reward = evaluate_policy(model, single_env, n_eval_episodes=10)
         print("final model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
@@ -103,7 +105,7 @@ def test_observations():
     env.close()
 
 if __name__ == '__main__':
-    main()
+    # main()
 
     # ====== Some rough testing code =====
     # program = Program()
@@ -130,4 +132,4 @@ if __name__ == '__main__':
     # print(obs.shape)
     # env.close()
 
-    # test_observations()
+    test_observations()
