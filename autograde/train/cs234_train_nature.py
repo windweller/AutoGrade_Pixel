@@ -67,14 +67,19 @@ def greyscale(state):
     """
     Preprocess state (210, 160, 3) image into
     a (80, 80, 1) image in grey scale
+
+    (400, 400, 3)
+    ValueError: cannot reshape array of size 480000 into shape (210,160,3)
+
     """
-    state = np.reshape(state, [210, 160, 3]).astype(np.float32)
+    # state = np.reshape(state, [210, 160, 3]).astype(np.float32)
+    state = np.reshape(state, [400, 400, 3]).astype(np.float32)
 
     # grey scale
     state = state[:, :, 0] * 0.299 + state[:, :, 1] * 0.587 + state[:, :, 2] * 0.114
 
     # karpathy
-    state = state[35:195]  # crop
+    # state = state[35:195]  # crop
     state = state[::2, ::2]  # downsample by factor of 2
 
     state = state[:, :, np.newaxis]
