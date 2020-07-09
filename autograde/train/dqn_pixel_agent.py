@@ -127,13 +127,16 @@ def get_env_fn(program, reward_type, reward_shaping):
     return make_env
 
 
-def make_general_env(program, max_skip, num_envs, reward_type, reward_shaping, seed=0):
+def make_general_env(program, max_skip, num_envs, reward_type, reward_shaping, vectorized=True):
     base_env_fn = get_env_fn(program, reward_type, reward_shaping)
 
     if num_envs > 1:
         env = SubprocVecEnv([base_env_fn for _ in range(num_envs)])
     else:
-        env = DummyVecEnv([base_env_fn])
+        if vectorized:
+            env = DummyVecEnv([base_env_fn])
+        else:
+            env = base_env_fn()
 
     if max_skip > 1:
         env = MaxAndSkipEnv(env, skip=max_skip)
@@ -186,7 +189,7 @@ def main():
                     prioritized_replay=True,
                     verbose=1, tensorboard_log="./tensorboard_dqn_self_minus_finish_reward_log/")
 
-        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, vectorized=False)
         mean_reward, std_reward = evaluate_policy(model, single_env, n_eval_episodes=10)
         print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
@@ -196,7 +199,7 @@ def main():
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
-        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, vectorized=False)
         # AssertionError: You must pass only one environment when using this function
         # But then, the NN is expecting shape of (8, ...)
         mean_reward, std_reward = evaluate_policy(model, single_env, n_eval_episodes=10)
