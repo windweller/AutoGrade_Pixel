@@ -7,6 +7,7 @@ import tensorflow as tf
 import os
 import sys
 from autograde.train.cs234_utils import ReplayBuffer, Progbar, get_logger, export_plot
+from autograde.rl_envs.bounce_env import BouncePixelEnv, Program, ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO
 
 import pyglet
 
@@ -567,7 +568,10 @@ class QN(object):
         """
         Re create an env and record a video for one episode
         """
-        env = gym.make(self.config.env_name)
+        # env = gym.make(self.config.env_name)
+        program = Program()
+        program.set_correct()
+        env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False)
         env = gym.wrappers.Monitor(env, self.config.record_path, video_callable=lambda x: True, resume=True)
         env = MaxAndSkipEnv(env, skip=self.config.skip_frame)
         env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1), # (80, 80, 1),
@@ -1142,7 +1146,6 @@ class config():
 
 
 if __name__ == '__main__':
-    from autograde.rl_envs.bounce_env import BouncePixelEnv, Program, ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO
 
     config = config()
 
