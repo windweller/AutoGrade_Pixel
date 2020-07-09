@@ -1146,6 +1146,8 @@ class config():
 
 
 if __name__ == '__main__':
+    import os
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
 
     config = config()
 
