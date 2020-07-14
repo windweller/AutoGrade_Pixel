@@ -182,10 +182,12 @@ class Program(Config):
 
     def set_correct_with_theme(self):
         self.config_dict['when run'].append(LAUNCH_NEW_BALL)
+        self.config_dict['when run'].append("set 'retro' scene")
+        self.config_dict['when run'].append("set 'retro' ball")
+        self.config_dict['when run'].append("set 'retro' paddle")
         self.config_dict['when left arrow'].append(MOVE_LEFT)
         self.config_dict['when right arrow'].append(MOVE_RIGHT)
         self.config_dict['when ball hits paddle'].append(BOUNCE_BALL)
-        self.config_dict['when ball hits paddle'].append("set 'retro' scene")
         self.config_dict['when ball hits wall'].append(BOUNCE_BALL)
         self.config_dict['when ball in goal'].append(SCORE_POINT)
         self.config_dict['when ball in goal'].append(LAUNCH_NEW_BALL)

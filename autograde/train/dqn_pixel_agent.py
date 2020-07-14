@@ -167,7 +167,7 @@ def test_observations():
 
 def main():
     program = Program()
-    program.set_correct()
+    program.set_correct_with_theme()
 
     # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
     env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False)

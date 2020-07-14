@@ -1154,7 +1154,7 @@ if __name__ == '__main__':
 
     # make env
     program = Program()
-    program.set_correct()
+    program.set_correct_with_theme()
 
     env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False)
     env = MaxAndSkipEnv(env, skip=4)
