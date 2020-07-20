@@ -11,7 +11,6 @@ from gym.wrappers.monitoring.video_recorder import ImageEncoder
 import pygame
 import numpy as np
 
-from autograde.rl_envs.utils import SmartImageViewer
 from autograde.envs.bounce import Bounce, Program, screen_height, screen_width, \
     WHEN_LEFT_ARROW, WHEN_RIGHT_ARROW, fps, PAUSE
 
