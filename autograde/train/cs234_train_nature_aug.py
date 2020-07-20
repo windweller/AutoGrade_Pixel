@@ -1191,7 +1191,7 @@ def replay_human_play_with_gym_wrapper(human_play_npz, seed, max_len=1500, max_s
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
     os.environ['SDL_AUDIODRIVER'] = 'dsp'
-    
+
     # we won't show videos, because it's harder.
     # We just want to prove that we get the reward
     program = Program()

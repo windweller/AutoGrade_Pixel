@@ -48,7 +48,7 @@ import pymunk.pygame_util
 import json
 from abc import ABC, abstractmethod
 
-import utils_seeding as seeding
+from . import utils_seeding as seeding
 
 # ==== Settings ====
 
