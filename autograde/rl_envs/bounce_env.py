@@ -512,12 +512,7 @@ def replay_human_play(program_name, human_play_npz, seed, max_len=3000):
 
     env.close()
 
-
-# TODO: 1. Convert human play to conform max skip (if needed, can convert a few actions)
-# TODO: 2. Replay human actions under the wrappers (first MaxSkip, then wrap/resize, grayscale, etc.)
-# TODO: 3. Observe if human actions can get the reward you want
 # TODO: 4. Add the sequence into CS234 Training code (Emma is most comfortable with it; and you already got it running...so it's simpler than starting from scratch)
-
 
 def grouped(iterable, n):
     "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."

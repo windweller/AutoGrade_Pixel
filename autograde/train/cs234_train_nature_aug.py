@@ -1141,7 +1141,7 @@ class Config():
     gamma = 0.99
     learning_freq = 4
     state_history = 4
-    skip_frame = 4
+    skip_frame = 2
     lr_begin = 0.00025
     lr_end = 0.00005
     lr_nsteps = nsteps_train / 2
@@ -1149,6 +1149,11 @@ class Config():
     eps_end = 0.1
     eps_nsteps = 1000000
     learning_start = 50000
+
+    # human play guidance
+    use_human_play = False
+    human_play_dir = "./autograde/rl_envs/bounce_humanplay_recordings/"
+    human_play_file_names = [("human_actions_2222_max_skip_2_converted.npz", 2222)]
 
 
 def replay_human_play_with_gym_wrapper(human_play_npz, seed, max_len=1500, max_skip=2):

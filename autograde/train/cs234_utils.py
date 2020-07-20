@@ -106,6 +106,7 @@ class ReplayBuffer(object):
 
     def encode_recent_observation(self):
         """Return the most recent `frame_history_len` frames.
+        This is FrameStacking
 
         Returns
         -------
