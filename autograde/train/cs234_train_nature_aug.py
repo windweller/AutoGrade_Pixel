@@ -1106,6 +1106,7 @@ class NatureQN(Linear):
         ######################## END YOUR CODE #######################
         return out
 
+
 class NatureQNWithHuman(NatureQN):
     """
     Override some key aspects for executing human policy
@@ -1113,6 +1114,7 @@ class NatureQNWithHuman(NatureQN):
 
     .run() calls .train()
     """
+
     def train(self, exp_schedule, lr_schedule):
         """
         Performs training of Q
@@ -1134,7 +1136,7 @@ class NatureQNWithHuman(NatureQN):
         q_values = deque(maxlen=1000)
         self.init_averages()
 
-        t = last_eval = last_record = 0  # time control of nb of steps
+        t = last_eval = last_record = last_human_play = 0  # time control of nb of steps
         scores_eval = []  # list of scores computed at iteration time
         scores_eval += [self.evaluate()]
 
@@ -1142,12 +1144,13 @@ class NatureQNWithHuman(NatureQN):
 
         # interact with environment
         while t < self.config.nsteps_train:
-            total_reward = 0 # episodic reward
+            total_reward = 0  # episodic reward
             state = self.env.reset()
             while True:
                 t += 1
                 last_eval += 1
                 last_record += 1
+                last_human_play += 1
                 if self.config.render_train: self.env.render()
                 # replay memory stuff
                 idx = replay_buffer.store_frame(state)
@@ -1196,6 +1199,52 @@ class NatureQNWithHuman(NatureQN):
             # updates to perform at the end of an episode
             rewards.append(total_reward)
 
+            # add human play
+            if (t > self.config.learning_start) and (last_human_play > self.config.human_play_freq):
+                last_human_play = 0
+                # we masquerade human play execution as "training"
+                # we first take the human actions out!
+                sampled_idx = np.random.randint(0, len(self.config.human_play_file_names))
+                file_name, seed = self.config.human_play_file_names[sampled_idx]
+                human_actions = np.load(self.config.human_play_dir + file_name)['frames']
+
+                print("Performing human policy idx {}".format(sampled_idx))
+
+                # now execute this!
+                state = self.env.reset()
+                self.env.seed(seed)
+
+                action_idx = 0
+                total_reward = 0
+                while True:
+
+                    # replay memory stuff
+                    idx = replay_buffer.store_frame(state)
+                    q_input = replay_buffer.encode_recent_observation()
+
+                    # choose an action according to human policy
+                    action = human_actions[action_idx]
+
+                    # perform the action
+                    new_state, reward, done, info = self.env.step(action)
+
+                    # store the transition
+                    replay_buffer.store_effect(idx, action, reward, done)
+                    state = new_state
+
+                    # we do not perform training steps in here
+
+                    total_reward += reward
+
+                    if done:
+                        break
+
+                    action_idx += 1
+
+                print("Human policy total reward: {}".format(total_reward))
+
+                rewards.append(total_reward)  # adding to total rewards
+
             if (t > self.config.learning_start) and (last_eval > self.config.eval_freq):
                 # evaluate our policy
                 last_eval = 0
@@ -1212,6 +1261,7 @@ class NatureQNWithHuman(NatureQN):
         self.save()
         scores_eval += [self.evaluate()]
         export_plot(scores_eval, "Scores", self.config.plot_output)
+
 
 class Config():
     # env config
@@ -1253,7 +1303,7 @@ class Config():
     lr_nsteps = nsteps_train / 2
     eps_begin = 1
     eps_end = 0.1
-    eps_nsteps = 1000000
+    eps_nsteps = 4000000  # 1000000 # it probably decays too quickly!
     learning_start = 50000
 
     # human play guidance
@@ -1261,6 +1311,48 @@ class Config():
     human_play_freq = 50000
     human_play_dir = "./autograde/rl_envs/bounce_humanplay_recordings/"
     human_play_file_names = [("human_actions_2222_max_skip_2_converted.npz", 2222)]
+
+
+def main(args):
+    USE_HUMAN = args.human_play
+
+    import os
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    os.environ['SDL_AUDIODRIVER'] = 'dsp'
+
+    config = Config()
+    config.use_human_play = USE_HUMAN
+
+    # make env
+    program = Program()
+    program.set_correct()
+    # program.set_correct_with_theme()
+
+    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+    env = MaxAndSkipEnv(env, skip=2)  # maybe 2 is better?
+    env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1),  # (80, 80, 1),
+                        overwrite_render=True)
+
+    env = TimeLimit(env, max_episode_steps=1500)
+
+    # exploration strategy
+    exp_schedule = LinearExploration(env, config.eps_begin,
+                                     config.eps_end, config.eps_nsteps)
+
+    # learning rate schedule
+    lr_schedule = LinearSchedule(config.lr_begin, config.lr_end,
+                                 config.lr_nsteps)
+
+    # train model
+    tf_config = tf.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
+
+    with tf.Session(config=tf_config):
+        if USE_HUMAN:
+            model = NatureQNWithHuman(env, config)
+        else:
+            model = NatureQN(env, config)
+        model.run(exp_schedule, lr_schedule)
 
 
 def replay_human_play_with_gym_wrapper(human_play_npz, seed, max_len=1500, max_skip=2):
@@ -1300,46 +1392,15 @@ def replay_human_play_with_gym_wrapper(human_play_npz, seed, max_len=1500, max_s
 
 
 if __name__ == '__main__':
-    USE_HUMAN = False
-
     # test if human play can be loaded and played correctly
     # This works!!!!
     replay_human_play_with_gym_wrapper("human_actions_2222_max_skip_2_converted.npz", seed=2222, max_skip=2)
 
-    import os
-    os.environ['SDL_VIDEODRIVER'] = 'dummy'
-    os.environ['SDL_AUDIODRIVER'] = 'dsp'
+    import argparse
 
-    config = Config()
-    config.use_human_play = USE_HUMAN
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--human_play", action="store_true", help="Execute human play every N iterations")
 
-    # make env
-    program = Program()
-    program.set_correct()
-    # program.set_correct_with_theme()
+    args = parser.parse_args()
 
-    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False)
-    env = MaxAndSkipEnv(env, skip=2)  # maybe 2 is better?
-    env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1),  # (80, 80, 1),
-                        overwrite_render=True)
-
-    env = TimeLimit(env, max_episode_steps=1500)
-
-    # exploration strategy
-    exp_schedule = LinearExploration(env, config.eps_begin,
-                                     config.eps_end, config.eps_nsteps)
-
-    # learning rate schedule
-    lr_schedule = LinearSchedule(config.lr_begin, config.lr_end,
-                                 config.lr_nsteps)
-
-    # train model
-    tf_config = tf.ConfigProto()
-    tf_config.gpu_options.allow_growth = True
-
-    with tf.Session(config=tf_config):
-        if USE_HUMAN:
-            model = NatureQNWithHuman(env, config)
-        else:
-            model = NatureQN(env, config)
-        model.run(exp_schedule, lr_schedule)
+    main(args)
