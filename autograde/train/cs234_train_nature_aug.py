@@ -1207,7 +1207,7 @@ def replay_human_play_with_gym_wrapper(human_play_npz, seed, max_len=1500, max_s
     # since MaxSkip does 2 actions at once, we half it to 1500
     env = TimeLimit(env, max_episode_steps=max_len)
 
-    human_actions = np.load("../rl_envs/bounce_humanplay_recordings/" + human_play_npz)['frames']
+    human_actions = np.load("./autograde/rl_envs/bounce_humanplay_recordings/" + human_play_npz)['frames']
 
     print("number of human actions: {}".format(human_actions.shape[0]))
 
