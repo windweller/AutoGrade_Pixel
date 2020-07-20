@@ -393,7 +393,7 @@ class QN(object):
         if len(scores_eval) > 0:
             self.eval_reward = scores_eval[-1]
 
-    def train(self, exp_schedule, lr_schedule, every_n_steps_replay_human=50000):
+    def train(self, exp_schedule, lr_schedule):
         """
         Performs training of Q
 
@@ -1106,6 +1106,112 @@ class NatureQN(Linear):
         ######################## END YOUR CODE #######################
         return out
 
+class NatureQNWithHuman(NatureQN):
+    """
+    Override some key aspects for executing human policy
+    We only override training
+
+    .run() calls .train()
+    """
+    def train(self, exp_schedule, lr_schedule):
+        """
+        Performs training of Q
+
+        Args:
+            exp_schedule: Exploration instance s.t.
+                exp_schedule.get_action(best_action) returns an action
+            lr_schedule: Schedule for learning rate
+        """
+
+        # Every freq, we sample ONE human play recording
+        # and execute it
+        human_play_freq = self.config.human_play_freq
+
+        # initialize replay buffer and variables
+        replay_buffer = ReplayBuffer(self.config.buffer_size, self.config.state_history)
+        rewards = deque(maxlen=self.config.num_episodes_test)
+        max_q_values = deque(maxlen=1000)
+        q_values = deque(maxlen=1000)
+        self.init_averages()
+
+        t = last_eval = last_record = 0  # time control of nb of steps
+        scores_eval = []  # list of scores computed at iteration time
+        scores_eval += [self.evaluate()]
+
+        prog = Progbar(target=self.config.nsteps_train)
+
+        # interact with environment
+        while t < self.config.nsteps_train:
+            total_reward = 0 # episodic reward
+            state = self.env.reset()
+            while True:
+                t += 1
+                last_eval += 1
+                last_record += 1
+                if self.config.render_train: self.env.render()
+                # replay memory stuff
+                idx = replay_buffer.store_frame(state)
+                q_input = replay_buffer.encode_recent_observation()
+
+                # chose action according to current Q and exploration
+                best_action, q_values = self.get_best_action(q_input)
+                action = exp_schedule.get_action(best_action)
+
+                # store q values
+                max_q_values.append(max(q_values))
+                q_values += list(q_values)
+
+                # perform action in env
+                new_state, reward, done, info = self.env.step(action)
+
+                # store the transition
+                replay_buffer.store_effect(idx, action, reward, done)
+                state = new_state
+
+                # perform a training step
+                loss_eval, grad_eval = self.train_step(t, replay_buffer, lr_schedule.epsilon)
+
+                # logging stuff
+                if ((t > self.config.learning_start) and (t % self.config.log_freq == 0) and
+                        (t % self.config.learning_freq == 0)):
+                    self.update_averages(rewards, max_q_values, q_values, scores_eval)
+                    exp_schedule.update(int(t))
+                    lr_schedule.update(int(t))
+                    if len(rewards) > 0:
+                        prog.update(t + 1, exact=[("Loss", loss_eval), ("Avg_R", self.avg_reward),
+                                                  ("Max_R", np.max(rewards)), ("eps", exp_schedule.epsilon),
+                                                  ("Grads", grad_eval), ("Max_Q", self.max_q),
+                                                  ("lr", lr_schedule.epsilon)])
+
+                elif (t < self.config.learning_start) and (t % self.config.log_freq == 0):
+                    sys.stdout.write("\rPopulating the memory {}/{}...".format(t,
+                                                                               self.config.learning_start))
+                    sys.stdout.flush()
+
+                # count reward
+                total_reward += reward
+                if done or t >= self.config.nsteps_train:
+                    break
+
+            # updates to perform at the end of an episode
+            rewards.append(total_reward)
+
+            if (t > self.config.learning_start) and (last_eval > self.config.eval_freq):
+                # evaluate our policy
+                last_eval = 0
+                print("")
+                scores_eval += [self.evaluate()]
+
+            if (t > self.config.learning_start) and self.config.record and (last_record > self.config.record_freq):
+                self.logger.info("Recording...")
+                last_record = 0
+                self.record()
+
+        # last words
+        self.logger.info("- Training done.")
+        self.save()
+        scores_eval += [self.evaluate()]
+        export_plot(scores_eval, "Scores", self.config.plot_output)
 
 class Config():
     # env config
@@ -1152,6 +1258,7 @@ class Config():
 
     # human play guidance
     use_human_play = False
+    human_play_freq = 50000
     human_play_dir = "./autograde/rl_envs/bounce_humanplay_recordings/"
     human_play_file_names = [("human_actions_2222_max_skip_2_converted.npz", 2222)]
 
@@ -1193,6 +1300,8 @@ def replay_human_play_with_gym_wrapper(human_play_npz, seed, max_len=1500, max_s
 
 
 if __name__ == '__main__':
+    USE_HUMAN = False
+
     # test if human play can be loaded and played correctly
     # This works!!!!
     replay_human_play_with_gym_wrapper("human_actions_2222_max_skip_2_converted.npz", seed=2222, max_skip=2)
@@ -1202,6 +1311,7 @@ if __name__ == '__main__':
     os.environ['SDL_AUDIODRIVER'] = 'dsp'
 
     config = Config()
+    config.use_human_play = USE_HUMAN
 
     # make env
     program = Program()
@@ -1228,5 +1338,8 @@ if __name__ == '__main__':
     tf_config.gpu_options.allow_growth = True
 
     with tf.Session(config=tf_config):
-        model = NatureQN(env, config)
+        if USE_HUMAN:
+            model = NatureQNWithHuman(env, config)
+        else:
+            model = NatureQN(env, config)
         model.run(exp_schedule, lr_schedule)

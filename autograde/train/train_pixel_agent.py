@@ -5,6 +5,7 @@ from stable_baselines import PPO2
 from stable_baselines.common.vec_env import VecFrameStack, DummyVecEnv
 from stable_baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from stable_baselines.common.atari_wrappers import ScaledFloatFrame, WarpFrame
+from gym.wrappers import TimeLimit
 
 from stable_baselines.common.callbacks import CallbackList, EvalCallback, CheckpointCallback, StopTrainingOnRewardThreshold
 from stable_baselines.common.policies import CnnLstmPolicy
@@ -29,6 +30,7 @@ def get_env_fn(program, reward_type, reward_shaping):
         # env = ScaledFloatFrame(env)
         env = ResizeFrame(env)
         # env = ScaledFloatFrame(env)
+        env = TimeLimit(env, max_episode_steps=3000)  # no skipping, it should be 3000. With skip, do 3000 / skip.
         return env
     return make_env
 
@@ -51,7 +53,6 @@ def main():
     program.set_correct()
 
     # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
-    env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=True)
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True  # pylint: disable=E1101
@@ -60,15 +61,21 @@ def main():
 
     with tf.Session(config=config):
 
-        checkpoint_callback = CheckpointCallback(save_freq=10000, save_path="./saved_models/self_minus_finish_reward_and_shaping/",
+        checkpoint_callback = CheckpointCallback(save_freq=250000, save_path="./saved_models/self_minus_finish_reward_and_shaping/",
                                                  name_prefix="ppo2_cnn_lstm_default")
 
-        # TODO: we can go back to nminibatches=1 training...
+        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=True)
         model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.99,
                      verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_and_shaping_log/")
 
+        # Eval first to make sure we can eval this...(otherwise there's no point in training...)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+        mean_reward, std_reward = evaluate_policy(model, single_env, n_eval_episodes=10)
+
+        print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
+
         # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
-        model.learn(total_timesteps=1000 * 10000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
+        model.learn(total_timesteps=5000000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
 
         model.save("./saved_models/ppo2_cnn_lstm_better_reward_and_shaping_final")
 
@@ -106,6 +113,8 @@ def test_observations():
 
 if __name__ == '__main__':
     main()
+
+    # test_observations()
 
     # ====== Some rough testing code =====
     # program = Program()
