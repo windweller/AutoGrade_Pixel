@@ -1107,7 +1107,7 @@ class NatureQN(Linear):
         return out
 
 
-class Config():
+class config():
     # env config
     render_train = False
     render_test = False
@@ -1196,7 +1196,7 @@ if __name__ == '__main__':
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
     os.environ['SDL_AUDIODRIVER'] = 'dsp'
 
-    config = Config()
+    config = config()
 
     # make env
     program = Program()
