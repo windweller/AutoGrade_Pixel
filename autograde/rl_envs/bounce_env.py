@@ -11,8 +11,9 @@ from gym.wrappers.monitoring.video_recorder import ImageEncoder
 import pygame
 import numpy as np
 
+from autograde.rl_envs.utils import SmartImageViewer
 from autograde.envs.bounce import Bounce, Program, screen_height, screen_width, \
-    WHEN_LEFT_ARROW, WHEN_RIGHT_ARROW, fps
+    WHEN_LEFT_ARROW, WHEN_RIGHT_ARROW, fps, PAUSE
 
 ONLY_SELF_SCORE = "only_self_score"
 SELF_MINUS_HALF_OPPO = "self_minus_half_oppo"
@@ -32,7 +33,184 @@ def define_physical_observation_space(shape=(3,)):
     return spaces.Box(low=-np.inf, high=np.inf, shape=shape, dtype=np.float)
 
 
-class BounceHumanPlayRecording(gym.Env):
+class PyGamePixelEnv(object):
+    def __init__(self, game):
+        self.game = game
+
+    def get_image(self):
+        """
+        https://mail.python.org/pipermail/python-list/2006-August/371647.html
+        https://pillow.readthedocs.io/en/stable/reference/Image.html
+        :return:
+        """
+        image_str = pygame.image.tostring(self.game.screen, 'RGB')
+        image = PIL.Image.frombytes(mode='RGB', size=(screen_height, screen_width), data=image_str)
+        image_np_array = np.array(image)
+        return image_np_array
+
+
+class BounceHumanPlayRecord(gym.Env, PyGamePixelEnv):
+    def __init__(self, program: Program, recording_dir=None):
+
+        self.program = program
+
+        self.recording_dir = recording_dir
+        os.makedirs(recording_dir, exist_ok=True)
+
+        self.bounce = Bounce(program)
+        self.recorded_actions = []
+
+        super().__init__(self.bounce)
+
+    def run_loop(self, keys):
+        self.bounce.paddle.stop_moving()  # always stop paddle running at first
+        # record action sequence here
+        if keys[pygame.K_LEFT]:
+            action_index = self.bounce.action_cmds.index(pygame.K_LEFT)
+        elif keys[pygame.K_RIGHT]:
+            action_index = self.bounce.action_cmds.index(pygame.K_RIGHT)
+        else:
+            action_index = self.bounce.action_cmds.index(PAUSE)
+
+        if self.bounce.when_left_arrow(keys):
+            cmds = self.bounce.cc.remove_bounce(self.program[WHEN_LEFT_ARROW])
+            list(map(lambda c: self.bounce.engine.execute(c), cmds))
+
+        if self.bounce.when_right_arrow(keys):
+            cmds = self.bounce.cc.remove_bounce(self.program[WHEN_RIGHT_ARROW])
+            list(map(lambda c: self.bounce.engine.execute(c), cmds))
+
+        # after a series of update...
+        self.bounce.bg.draw(self.bounce.screen)
+
+        self.bounce.sync_sprite()
+        self.bounce.all_sprites.draw(self.bounce.screen)
+
+        self.bounce.clock.tick(fps)
+        self.bounce.space.step(1 / fps)
+
+        self.bounce.score_board.draw(self.bounce.screen)
+
+        pygame.display.flip()
+
+        if self.recording_dir is not None:
+            self.recorded_actions.append(action_index)  # self.get_image()
+
+        return
+
+    def run_with_max_skip(self, seed=None, max_len=None, max_skip=2):
+        self.bounce.seed(seed)  # seeded! right before running
+        self.bounce.when_run_execute()
+
+        running = True
+        iters = 0
+
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    # even at quitting, we are still executing this loop one last time...
+                    running = False
+
+            keys = pygame.key.get_pressed()
+            # this lowers the refresh rate...
+            for _ in range(max_skip):
+                self.run_loop(keys)
+                iters += 1
+                if max_len:  # when this is not None
+                    if iters >= max_len:
+                        running = False  # and we let the saving happen
+
+                # we also have a rule of cutting off
+                if self.bounce.score_board.own == 5 or self.bounce.score_board.opponent == 5:
+                    running = False
+
+        if not running:
+            # we save here
+            print("Number of frames: {}".format(iters))
+            if self.recording_dir is not None:
+                np.savez_compressed(
+                    open(pjoin(self.recording_dir, "human_actions_{}_max_skip_{}.npz".format(seed, max_skip)), 'wb'),
+                    frames=np.array(self.recorded_actions, dtype=np.int))
+
+                return pjoin(self.recording_dir, "human_actions_{}.npz".format(seed))
+
+    def run(self, seed=None, max_len=None, debug=False):
+
+        self.bounce.seed(seed)  # seeded! right before running
+        self.bounce.when_run_execute()
+
+        if debug:
+            import pymunk
+            draw_options = pymunk.pygame_util.DrawOptions(self.bounce.screen)
+
+        running = True
+        iters = 0
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    # even at quitting, we are still executing this loop one last time...
+                    running = False
+
+            self.bounce.paddle.stop_moving()  # always stop paddle running at first
+
+            keys = pygame.key.get_pressed()
+
+            # record action sequence here
+            if keys[pygame.K_LEFT]:
+                action_index = self.bounce.action_cmds.index(pygame.K_LEFT)
+            elif keys[pygame.K_RIGHT]:
+                action_index = self.bounce.action_cmds.index(pygame.K_RIGHT)
+            else:
+                action_index = self.bounce.action_cmds.index(PAUSE)
+
+            if self.bounce.when_left_arrow(keys):
+                cmds = self.bounce.cc.remove_bounce(self.program[WHEN_LEFT_ARROW])
+                list(map(lambda c: self.bounce.engine.execute(c), cmds))
+
+            if self.bounce.when_right_arrow(keys):
+                cmds = self.bounce.cc.remove_bounce(self.program[WHEN_RIGHT_ARROW])
+                list(map(lambda c: self.bounce.engine.execute(c), cmds))
+
+            # after a series of update...
+            self.bounce.bg.draw(self.bounce.screen)
+
+            # draw PyMunk objects (don't need this when actually playing)
+            if debug:
+                self.bounce.space.debug_draw(draw_options)
+
+            self.bounce.sync_sprite()
+            self.bounce.all_sprites.draw(self.bounce.screen)
+
+            self.bounce.clock.tick(fps)
+            self.bounce.space.step(1 / fps)
+
+            self.bounce.score_board.draw(self.bounce.screen)
+
+            pygame.display.flip()
+
+            if self.recording_dir is not None:
+                self.recorded_actions.append(action_index)  # self.get_image()
+
+            iters += 1
+            if max_len:  # when this is not None
+                if iters >= max_len:
+                    running = False  # and we let the saving happen
+
+            # we also have a rule of cutting off
+            if self.bounce.score_board.own == 5 or self.bounce.score_board.opponent == 5:
+                running = False
+
+        if not running:
+            # we save here
+            print("Number of frames: {}".format(iters))
+            if self.recording_dir is not None:
+                np.savez_compressed(open(pjoin(self.recording_dir, "human_actions_{}.npz".format(seed)), 'wb'),
+                                    frames=np.array(self.recorded_actions, dtype=np.int))
+
+                return pjoin(self.recording_dir, "human_actions_{}.npz".format(seed))
+
+
+class BounceHumanPlayRecordVideo(gym.Env, PyGamePixelEnv):
     def __init__(self, program: Program, recording_dir=None):
         self.program = program
 
@@ -41,16 +219,7 @@ class BounceHumanPlayRecording(gym.Env):
         os.makedirs(recording_dir, exist_ok=True)
         self.recorded_frames = []
 
-    def get_image(self):
-        """
-        https://mail.python.org/pipermail/python-list/2006-August/371647.html
-        https://pillow.readthedocs.io/en/stable/reference/Image.html
-        :return:
-        """
-        image_str = pygame.image.tostring(self.bounce.screen, 'RGB')
-        image = PIL.Image.frombytes(mode='RGB', size=(screen_height, screen_width), data=image_str)
-        image_np_array = np.array(image)
-        return image_np_array
+        super().__init__(self.bounce)
 
     def run(self):
 
@@ -61,7 +230,7 @@ class BounceHumanPlayRecording(gym.Env):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                    # we save here
+                    # we save here; this is fine...we save when we close the window
                     if self.recording_dir is not None:
                         rec_id = np.random.randint(0, 100000)
                         np.savez_compressed(open(pjoin(self.recording_dir, "game_frames_{}.npz".format(rec_id)), 'wb'),
@@ -108,7 +277,7 @@ class BouncePixelEnv(gym.Env):
     """
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    def __init__(self, program: Program, reward_type, reward_shaping=True):
+    def __init__(self, program: Program, reward_type, reward_shaping=False):
 
         assert reward_type in {ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO}
         self.reward_type = reward_type
@@ -122,8 +291,11 @@ class BouncePixelEnv(gym.Env):
         self.program = program
 
         self.bounce = Bounce(program)
-        self.action_space = define_action_space(self.bounce.action_set)
+        self.action_space = define_action_space(self.bounce.action_cmds)
         self.observation_space = define_observation_space(screen_height, screen_width)
+
+    def seed(self, seed=None):
+        return self.bounce.seed(seed)
 
     def step(self, action):
         """
@@ -133,14 +305,14 @@ class BouncePixelEnv(gym.Env):
             done (bool): whether the episode has ended, in which case further step() calls will return undefined results
             info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
         """
-        if action >= len(self.bounce.action_set):
+        if action >= len(self.bounce.action_cmds):
             raise Exception("Can't choose an action based on index {}".format(action))
 
         prev_score = self.bounce.score_board.own
         prev_oppo_score = self.bounce.score_board.opponent
 
         # map action into key
-        action_key = self.bounce.action_set[action]
+        action_key = self.bounce.action_cmds[action]
 
         self.bounce.act(action_key)
 
@@ -174,12 +346,14 @@ class BouncePixelEnv(gym.Env):
 
         # reward shaping
         # it's only ON when there's only one ball, it's defined as the distance between ball to goal
+        # TODO: this particular reward shaping is wrong...it doesn't prescribe to the correct formula
         if self.reward_shaping:
-            assert len(self.bounce.ball_group.exist_balls) == 1, "reward shaping is only for 1 ball situation during training"
+            assert len(
+                self.bounce.ball_group.exist_balls) == 1, "reward shaping is only for 1 ball situation during training"
             curr_ball = list(self.bounce.ball_group.exist_balls.values())[0]
             x, y = curr_ball.body.position
-            if y <= 400 and x >= 0 and x <= 400: # flying off the screen on top (through the goal)
-                dist_to_goal = np.sqrt((400-y) * (400-y) + (x-200) * (x-200))
+            if y <= 400 and x >= 0 and x <= 400:  # flying off the screen on top (through the goal)
+                dist_to_goal = np.sqrt((400 - y) * (400 - y) + (x - 200) * (x - 200))
                 dist_to_goal /= 60  # SCALE = 30, then / 2)
                 dist_to_goal /= 50  # FPS (1 sec)
                 # dist_to_goal = max(dist_to_goal, -5)
@@ -190,13 +364,18 @@ class BouncePixelEnv(gym.Env):
             reward += dist_reward
 
         # make reward a bit smaller...
-        reward /= 10
+        # reward /= 10
 
         return self.get_image(), reward, done, {"score": score, "oppo_score": oppo_score}
 
     def reset(self):
         # we take the shortcut -- re-create the instance
+        # TODO: currently seeding needs to happen after reset
+        # TODO: other ways seem to be worse...so do not consider it
+
+        # seeding needs to happen after the reset
         self.bounce = Bounce(self.program)
+
         return self.get_image()
 
     def render(self, mode='human'):
@@ -246,9 +425,7 @@ def convert_np_to_video(frames_name, output_video_name):
     ime.close()
 
 
-if __name__ == '__main__':
-    # use "numpy_to_mp4.py" to turn numpy to actual mp4
-
+def interactive_run():
     program = Program()
     program.set_correct()
     # program.set_correct_with_theme()
@@ -256,16 +433,188 @@ if __name__ == '__main__':
     app = Bounce(program)
     app.run()
 
-    import sys
-    sys.exit(0)
 
-    # record videos, and then convert them!
+def record_human_play_to_video(program_name, video_name):
+    assert ".mp4" in video_name
+    assert ".json" in program_name
+
+    # remove these lines for a more flexible function
+    assert "/" not in program_name, "we prefix the directory, just enter the name of file"
+    assert "/" not in video_name, "we prefix the directory, just enter the name of file"
+
     program = Program()
-    # program.load("../envs/bounce_programs/demo1.json")
-    program.load("../envs/bounce_programs/demo2.json")
-    app = BounceRecording(program, "./bounce_gameplay_recordings/")
+
+    program.load("../envs/bounce_programs/" + program_name)
+    app = BounceHumanPlayRecordVideo(program, "./bounce_gameplay_recordings/")
     filename = app.run()
 
-    # filename = "./bounce_gameplay_recordings/game_frames_46008.npz"
+    convert_np_to_video(filename, "./bounce_gameplay_recordings/" + video_name)
 
-    convert_np_to_video(filename, "./bounce_gameplay_recordings/video2.mp4")
+
+def record_human_play_to_actions(program_name, seed, max_len=3000, max_skip=1):
+    assert ".json" in program_name
+    assert "/" not in program_name, "we prefix the directory, just enter the name of file"
+
+    program = Program()
+
+    program.load("../envs/bounce_programs/" + program_name)
+
+    # the goal is to record some human play
+    app = BounceHumanPlayRecord(program, "./bounce_humanplay_recordings/")
+    # we actually override initial positions after seeding
+    # so printing won't tell us the true positions we sampled
+
+    # print("assignment counter:", app.bounce.ball_group.assignment_counter)
+    # print("Ball positions:", app.bounce.ball_group.ball_inits[:8])
+    if max_skip != 1:
+        app.run_with_max_skip(seed, max_len=max_len, max_skip=max_skip)
+    else:
+        app.run(seed, max_len=max_len)
+
+
+def replay_human_play(program_name, human_play_npz, seed, max_len=3000):
+    # this one will be a bit tricky
+    # We will actually load in the Agent (Gym) environment
+    # Luckily DQN doesn't require a vec env...so we are lucky here, loading in human will work fine
+
+    assert '.npz' in human_play_npz
+
+    program = Program()
+    program.load("../envs/bounce_programs/" + program_name)
+    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, False)
+
+    from autograde.rl_envs.utils import SmartImageViewer
+
+    human_actions = np.load("./bounce_humanplay_recordings/" + human_play_npz)['frames']  # this is a misnomer
+
+    viewer = SmartImageViewer()
+
+    obs = env.reset()
+    env.seed(seed)  # NOTE: seed needs to happen after reset (unfortunate, I know...)
+
+    # env.bounce.ball_group.get_new_ball_init()
+    # print("assignment counter:", env.bounce.ball_group.assignment_counter)
+    # print("Ball positions:", env.bounce.ball_group.ball_inits[:8])
+
+    for i in range(max_len):
+        # action = np.random.randint(env.action_space.n, size=1)
+
+        obs, rewards, dones, info = env.step(human_actions[i])
+        # env.render()
+        # obs = obs.squeeze(0)
+        viewer.imshow(obs)
+        if rewards != 0:
+            print(rewards)
+
+        if dones:
+            break
+
+        env.bounce.clock.tick(fps)
+
+    env.close()
+
+
+# TODO: 1. Convert human play to conform max skip (if needed, can convert a few actions)
+# TODO: 2. Replay human actions under the wrappers (first MaxSkip, then wrap/resize, grayscale, etc.)
+# TODO: 3. Observe if human actions can get the reward you want
+# TODO: 4. Add the sequence into CS234 Training code (Emma is most comfortable with it; and you already got it running...so it's simpler than starting from scratch)
+
+
+def grouped(iterable, n):
+    "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
+    return zip(*[iter(iterable)] * n)
+
+
+def verify_and_convert_human_play_to_max_skip(human_play_npz, seed, max_len=3000, max_skip=2):
+    # TODO: save a new npz that conforms max skip
+    # TODO: we should check both 2 and 4
+    human_actions = np.load("./bounce_humanplay_recordings/" + human_play_npz)['frames']  # this is a misnomer
+    print("first check if it's divisible by max_skip, or we have to pad the end: {}".format(
+        human_actions.shape[0] % max_skip == 0))
+    print("number of human actions:", human_actions.shape[0])
+
+    converted_actions = []
+    # now we check if all consecutive (max_skip) actions are the same
+    global_counter = 0
+    for tup_seg in grouped(human_actions.tolist(), max_skip):
+        prev_a = None
+        for i in range(max_skip):
+            if prev_a is None:
+                prev_a = tup_seg[i]
+            else:
+                if tup_seg[i] != prev_a:
+                    print("pair index {}, actions={}, {}".format(global_counter, prev_a, tup_seg[i]))
+                prev_a = tup_seg[i]
+
+        converted_actions.append(tup_seg[0])
+        global_counter += 1
+
+    assert len(converted_actions) == human_actions.shape[0] / 2
+    np.savez_compressed(open(
+        pjoin("./bounce_humanplay_recordings/", "human_actions_{}_max_skip_{}_converted.npz".format(seed, max_skip)),
+        'wb'),
+                        frames=np.array(converted_actions, dtype=np.int))
+
+
+def replay_human_play_with_sticky_actions(program_name, human_play_npz, seed, max_len=3000, max_skip=2):
+    assert '.npz' in human_play_npz
+
+    program = Program()
+    program.load("../envs/bounce_programs/" + program_name)
+    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, False)
+
+    from autograde.rl_envs.utils import SmartImageViewer
+
+    human_actions = np.load("./bounce_humanplay_recordings/" + human_play_npz)['frames']  # this is a misnomer
+
+    viewer = SmartImageViewer()
+
+    obs = env.reset()
+    env.seed(seed)  # NOTE: seed needs to happen after reset (unfortunate, I know...)
+
+    # env.bounce.ball_group.get_new_ball_init()
+    # print("assignment counter:", env.bounce.ball_group.assignment_counter)
+    # print("Ball positions:", env.bounce.ball_group.ball_inits[:8])
+
+    for i in range(max_len):
+        # action = np.random.randint(env.action_space.n, size=1)
+        action = human_actions[i]
+        for _ in range(max_skip):
+            obs, rewards, dones, info = env.step(action)
+            # env.render()
+            # obs = obs.squeeze(0)
+            viewer.imshow(obs)
+            if rewards != 0:
+                print(rewards)
+
+            if dones:
+                break
+
+        if dones:
+            break
+        env.bounce.clock.tick(fps)
+
+    env.close()
+
+
+if __name__ == '__main__':
+    pass
+    # use this to play the game as a human
+    # interactive_run()
+
+    # record human play videos, and then convert them!
+    # record_human_play_to_video("demo2.json", "video2.mp4")
+
+    # reocrd human actions when playing
+    # record_human_play_to_actions("correct_sample.json", seed=2222)  # do not override this...you got 5:0
+    # record_human_play_to_actions("correct_sample.json", seed=2222, max_skip=2)
+    # record_human_play_to_actions("correct_sample.json", seed=4141)
+
+    # replay_human_play("correct_sample.json", "human_actions_2222.npz", seed=2222)
+
+    # verify_and_convert_human_play_to_max_skip("human_actions_2222_max_skip_2.npz", seed=2222, max_skip=2)
+
+    # so it should be 1500 time steps, not 3000...but check Monitor counts real frames or agent actions
+
+    # replay_human_play_with_sticky_actions("correct_sample.json", "human_actions_2222_max_skip_2_converted.npz", seed=2222, max_skip=2)
+

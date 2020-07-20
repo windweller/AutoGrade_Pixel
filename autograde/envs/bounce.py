@@ -38,7 +38,6 @@ but we can just give it a visual update without adding velocity?
 """
 import os
 import pathlib
-import random
 
 import pygame
 import pymunk
@@ -48,6 +47,8 @@ import pymunk.pygame_util
 
 import json
 from abc import ABC, abstractmethod
+
+import utils_seeding as seeding
 
 # ==== Settings ====
 
@@ -59,7 +60,7 @@ RANDOM = 'random'
 # and do one time update
 speed_choices = ['random', 'very slow', 'slow', 'normal', 'fast', 'very fast']
 speed_dict = {
-    'very slow': 50, 'slow': 150, 'normal': 300, 'fast': 450, 'very fast': 600
+    'very slow': 100, 'slow': 200, 'normal': 300, 'fast': 400, 'very fast': 500
 }
 
 theme_choices = [HARDCOURT, RETRO]
@@ -81,10 +82,12 @@ screen_width = 400
 screen_height = 400
 distance_from_boundary = 17
 fps = 50
+BALL_RADIUS = 14
 
 wall_thickness = 15
 
 game_name = "Bounce"
+PAUSE = 'Pause'
 
 # 1: move left
 # 2: move right
@@ -203,7 +206,7 @@ class Theme(object):
         curr_dir = pathlib.Path(__file__).parent.absolute()
         hardcourt_addr = {
             'background': os.path.join(curr_dir, 'bounce_assets/background.png'),
-            'paddle': os.path.join(curr_dir,  './bounce_assets/paddle.png'),
+            'paddle': os.path.join(curr_dir, './bounce_assets/paddle.png'),
             'wall': os.path.join(curr_dir, './bounce_assets/wall.png'),
             'ball': os.path.join(curr_dir, './bounce_assets/ball.png'),
         }
@@ -268,6 +271,7 @@ class Background(object):
         img = pygame.transform.scale(img, (screen_width, screen_height))
         self.sprite = img.convert()
 
+
 def pymunk_safe_remove(space, body, shape):
     if shape is not None:
         if shape in space.shapes:
@@ -276,8 +280,10 @@ def pymunk_safe_remove(space, body, shape):
         if body in space.bodies:
             space.remove(body)
 
+
 class Ball(AbstractGameObject):
-    def __init__(self, id, space, all_sprites, theme_str=None):
+    def __init__(self, id, space, all_sprites, np_random, theme_str=None,
+                 position=None, direction=None):
         """
         This will add a ball to space, all_sprites
         and save a reference to it
@@ -298,24 +304,37 @@ class Ball(AbstractGameObject):
 
         self.sprite = None
 
-        self.radius = 14  # 28x28
+        self.radius = BALL_RADIUS # 14  # 28x28
         self.speed = speed_dict['normal']
 
-        self.create()
+        self.np_random = np_random
 
-    def create(self):
+        self.create(position, direction)
+
+    def create(self, position=None, direction=None):
         # seperate for HARDCOURT and RETRO
         # this is only used to launch a new ball; change theme only changes sprite
         ball_body = pymunk.Body(1, pymunk.inf)
 
-        ball_body.position = (
-            random.randint(self.radius + wall_thickness, screen_width - wall_thickness - self.radius), 300)
+        # ball_body.position = (
+        #     random.randint(self.radius + wall_thickness, screen_width - wall_thickness - self.radius), 300)
+        if position is not None:
+            ball_body.position = position
+        else:
+            ball_body.position = (
+                self.np_random.randint(self.radius + wall_thickness, screen_width - wall_thickness - self.radius), 300)
 
         # Poly is better to accommodate the angle
         ball_shape = pymunk.Poly.create_box(ball_body, (self.radius * 2, self.radius * 2))
         # ball_shape = pymunk.Circle(ball_body, self.radius)
-        direction = random.choice(
-            [(random.randint(1, self.speed / 2), -self.speed), (random.randint(-self.speed / 2, -1), -self.speed)])
+
+        # direction = random.choice(
+        #     [(random.randint(1, self.speed / 2), -self.speed), (random.randint(-self.speed / 2, -1), -self.speed)])
+        if direction is None:
+            choice_idx = self.np_random.choice([0, 1])
+            direction = [(self.np_random.randint(1, int(self.speed / 2)), -self.speed),
+                 (self.np_random.randint(-int(self.speed / 2), -1), -self.speed)][choice_idx]
+
         ball_body.apply_impulse_at_local_point(pymunk.Vec2d(direction))
 
         ball_shape.elasticity = 1.0
@@ -382,10 +401,11 @@ class Ball(AbstractGameObject):
 
     def set_speed(self, new_speed):
         self.speed = speed_dict[new_speed]
+        self.normalize_velocity()
 
 
 class BallGroup(object):
-    def __init__(self, space, all_sprites):
+    def __init__(self, space, all_sprites, np_random):
         self.balls = {}  # {ball_name: ball_obj}  (ball name is passed into PyMunk object)
 
         self.exist_balls = {}
@@ -397,6 +417,50 @@ class BallGroup(object):
         self.curr_ball_num = 0
         self.LIMIT = 10
 
+        self.np_random = np_random
+        self.speed = speed_dict['normal']
+
+        # in order to solve randomness problem
+        # we actually sample a fixed set of ball directions and positions
+        # and then we loop on them
+        # we sample 1000
+        self.num_inits_stored = 100  # 10 balls appearing 10 times
+        self.assignment_counter = 0
+        self.ball_inits = self.sample_ball_inits()
+        self.curr_seed = np_random.curr_seed
+
+    def sample_ball_inits(self):
+        # can't use map -- it destroys our random stuff
+        res = []
+        for _ in range(self.num_inits_stored):
+            res.append(self.sample_ball_init())
+        return res
+
+    def get_new_ball_init(self):
+        # change of seed will result in a new sampling
+        # and reset of counter
+        if self.np_random.curr_seed != self.curr_seed:
+            self.ball_inits = self.sample_ball_inits()
+            self.assignment_counter = 0
+
+        # no-boundary looping is here
+        if self.assignment_counter >= self.num_inits_stored:
+            # reset to 0 when reach 100
+            self.assignment_counter = 0
+
+        new_init = self.ball_inits[self.assignment_counter]
+        self.assignment_counter += 1
+        return new_init
+
+    def sample_ball_init(self):
+        position = (
+            self.np_random.randint(BALL_RADIUS + wall_thickness, screen_width - wall_thickness - BALL_RADIUS), 300)
+        choice_idx = self.np_random.choice([0, 1])
+        direction = [(self.np_random.randint(1, int(self.speed / 2)), -self.speed),
+                     (self.np_random.randint(-int(self.speed / 2), -1), -self.speed)][choice_idx]
+
+        return position, direction
+
     def exists(self, id):
         return id in self.exist_balls
 
@@ -407,7 +471,10 @@ class BallGroup(object):
         if id is None:
             id = len(self.balls)
         if self.curr_ball_num <= self.LIMIT:
-            self.balls[id] = Ball(id, self.space, self.all_sprites, self.curr_theme)
+            # get new init
+            position, direction = self.get_new_ball_init()
+            self.balls[id] = Ball(id, self.space, self.all_sprites, self.np_random, self.curr_theme,
+                                  position, direction)
             self.curr_ball_num += 1
             self.exist_balls[id] = self.balls[id]
         else:
@@ -443,6 +510,11 @@ class BallGroup(object):
             self.curr_ball_num -= 1
 
     def set_speed(self, new_speed):
+        # we don't need to fix random seed here...I hope
+        if new_speed == 'random':
+            new_speed = self.np_random.choice(list(speed_dict.keys()))
+
+        self.speed = speed_dict[new_speed]
         list(map(lambda tup: tup[1].set_speed(new_speed), self.exist_balls.items()))
 
 
@@ -684,7 +756,8 @@ class ShadowEngine(object):
                  paddle: Paddle, goal: Goal,
                  bottom: Bottom, background: Background,
                  wall_group: WallGroup,
-                 score_board: ScoreBoard):
+                 score_board: ScoreBoard,
+                 np_random):
         self.ball_group = ball_group
         self.paddle = paddle
         self.bottom = bottom
@@ -692,6 +765,8 @@ class ShadowEngine(object):
         self.background = background
         self.score_board = score_board
         self.wall_group = wall_group
+
+        self.np_random = np_random
 
         self.executable_cmds = [MOVE_LEFT, MOVE_RIGHT, SCORE_OPPO_POINT, SCORE_POINT, LAUNCH_NEW_BALL]
 
@@ -754,19 +829,20 @@ class ShadowEngine(object):
     def extract_speed(self, cmd):
         speed_text = cmd.split("'")[1]
         if speed_text == 'random':
-            speed_text = random.choice(speed_choices)  # choose a non-random option
+            speed_text = self.np_random.choice(speed_choices)  # choose a non-random option
         return speed_text
 
     def extract_theme(self, cmd):
         theme_text = cmd.split("'")[1]
         if theme_dict[theme_text] == 'random':
-            theme_text = random.choice(theme_choices)
+            theme_text = self.np_random.choice(theme_choices)
         return theme_text
 
 
 class CollisionController(object):
-    def __init__(self, space, program, ball_group, engine: ShadowEngine):
+    def __init__(self, space, program, ball_group, engine: ShadowEngine, np_random):
 
+        self.np_random = np_random
         self.ball_group = ball_group
         self.program = program
         self.engine = engine
@@ -855,6 +931,7 @@ class CollisionController(object):
             for cmd in commands:
                 self.engine.execute(cmd)
             return bounce_or_not
+
         return callback
 
     def remove_bounce(self, cmds):
@@ -880,6 +957,7 @@ class CollisionController(object):
         def new_call_back(arbiter, space, data):
             prev_callback(arbiter, space, data)
             func(arbiter, space, data)
+
         return new_call_back
 
     # let's compress this into one function after we examine there's no problem
@@ -897,7 +975,7 @@ class CollisionController(object):
             self.handler_dict[BALL_HIT_WALL].post_solve = self.normalize_velocity()
 
             set_callback_func = self.get_program_to_callback(BALL_HIT_WALL, set_cmds, True)
-            self.handler_dict[BALL_HIT_WALL].separate = set_callback_func # self.get_empty_func()
+            self.handler_dict[BALL_HIT_WALL].separate = set_callback_func  # self.get_empty_func()
         else:
             callback_func = self.get_program_to_callback(BALL_HIT_WALL, cmds, bounce_or_not=False)
             self.handler_dict[BALL_HIT_WALL].begin = callback_func
@@ -922,7 +1000,7 @@ class CollisionController(object):
 
             self.handler_dict[BALL_IN_GOAL].begin = self.get_empty_func(True)
             self.handler_dict[BALL_IN_GOAL].post_solve = self.normalize_velocity()
-            self.handler_dict[BALL_IN_GOAL].separate = callback_func # self.get_empty_func()
+            self.handler_dict[BALL_IN_GOAL].separate = callback_func  # self.get_empty_func()
         else:
             # need to remove
             callback_func = self.get_program_to_callback(BALL_IN_GOAL, cmds, bounce_or_not=False)
@@ -948,6 +1026,24 @@ class CollisionController(object):
             callback_func = self.get_program_to_callback(BALL_HIT_PADDLE, cmds, bounce_or_not=False)
             self.handler_dict[BALL_HIT_PADDLE].begin = callback_func
 
+
+class RNG(object):
+    def __init__(self):
+        self.np_random = None
+        self.curr_seed = None
+
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        self.curr_seed = seed
+        return [seed]
+
+    def choice(self, a, size=None, replace=True, p=None):
+        return self.np_random.choice(a, size, replace, p)
+
+    def randint(self, low, high=None, size=None, dtype=int):
+        return self.np_random.randint(low, high, size, dtype)
+
+
 class Bounce(object):
     """
     Collision handler will go in here
@@ -961,6 +1057,10 @@ class Bounce(object):
 
     def __init__(self, program):
         pygame.init()
+
+        self.rng = RNG()
+        # I think it's this seed's problem
+        self.seed()
 
         self.program = program
 
@@ -979,20 +1079,29 @@ class Bounce(object):
         self.bottom = Bottom(self.space, self.all_sprites)
         self.goal = Goal(self.space, self.all_sprites)
 
-        self.ball_group = BallGroup(self.space, self.all_sprites)
+        self.ball_group = BallGroup(self.space, self.all_sprites, self.rng)
 
         self.score_board = ScoreBoard()
 
         self.all_objs = [self.paddle, self.ball_group]
 
-        self.engine = ShadowEngine(self.ball_group, self.paddle, self.goal, self.bottom, self.bg, self.walls, self.score_board)
-        self.cc = CollisionController(self.space, program, self.ball_group, self.engine)
+        self.engine = ShadowEngine(self.ball_group, self.paddle, self.goal, self.bottom, self.bg, self.walls,
+                                   self.score_board, self.rng)
+        self.cc = CollisionController(self.space, program, self.ball_group, self.engine, self.rng)
 
         self.cc.compile()
 
-        self.action_set = [pygame.K_RIGHT, pygame.K_LEFT]
+        self.action_cmds = [pygame.K_RIGHT, pygame.K_LEFT, PAUSE]  # "None" action correspond to pause
 
         self.fresh_run = True
+
+    def seed(self, seed=None):
+        # we use a class object, so that if we update seed here, it broadcasts into everywhere
+        return self.rng.seed(seed)
+        # self.np_random, seed = seeding.np_random(seed)
+        # but the random seed in all other parts of the game is NOT necessarily updated
+        # this means we need to do that, explicitly
+        # return [seed]
 
     def sync_sprite(self):
         for o in self.all_objs:
@@ -1010,7 +1119,7 @@ class Bounce(object):
     def when_right_arrow(self, keys):
         return keys[pygame.K_RIGHT]
 
-    def run(self):
+    def run(self, debug=False):
 
         draw_options = pymunk.pygame_util.DrawOptions(self.screen)
         self.when_run_execute()
@@ -1035,10 +1144,10 @@ class Bounce(object):
 
             # after a series of update...
             self.bg.draw(self.screen)
-            self.score_board.draw(self.screen)
 
             # draw PyMunk objects (don't need this when actually playing)
-            # app.space.debug_draw(draw_options)
+            if debug:
+                app.space.debug_draw(draw_options)
 
             self.sync_sprite()
             self.all_sprites.draw(self.screen)
@@ -1046,18 +1155,19 @@ class Bounce(object):
             self.clock.tick(fps)
             self.space.step(1 / fps)
 
-            pygame.display.flip()
+            self.score_board.draw(self.screen)
 
+            pygame.display.flip()
 
     def prefill_keys(self):
         # used for agents
         keys = {}
-        for k in self.action_set:
+        for k in self.action_cmds:
             keys[k] = False
         return keys
 
     def act(self, action):
-        assert action in self.action_set, "need to supply correct action command: {}".format(self.action_set)
+        assert action in self.action_cmds, "need to supply correct action command: {}".format(self.action_cmds)
 
         if self.fresh_run:
             self.when_run_execute()
@@ -1092,13 +1202,19 @@ class Bounce(object):
 
         pygame.display.flip()
 
+
 if __name__ == '__main__':
     program = Program()
 
     # program.set_correct()
-    # program.set_correct_with_theme()
+    program.set_correct_with_theme()
     # program.load("./bounce_programs/change_scene.json")
     # program.load("./bounce_programs/demo1.json")
-    program.load("./bounce_programs/easier_demo2.json")
+    # program.load("./bounce_programs/easier_demo2.json")
+    # program.load("./bounce_programs/speed_test.json")
     app = Bounce(program)
+    app.seed(2222)
+    app.ball_group.get_new_ball_init()
+    print("assignment counter:", app.ball_group.assignment_counter)
+    print("Ball positions:", app.ball_group.ball_inits[:8])
     app.run()

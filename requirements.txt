@@ -7,3 +7,4 @@ pygame
 pillow
 opencv-python
 matplotlib
+wandb
