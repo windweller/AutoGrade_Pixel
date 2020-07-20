@@ -113,11 +113,12 @@ def main():
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
     os.environ['SDL_AUDIODRIVER'] = 'dsp'
-    
+
     program = Program()
     program.set_correct()
 
     # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+    # TODO: if wrap monitor, we can get episodic reward
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True  # pylint: disable=E1101
@@ -127,9 +128,9 @@ def main():
         checkpoint_callback = CheckpointCallback(save_freq=250000, save_path="./saved_models/self_minus_finish_reward_and_shaping/",
                                                  name_prefix="ppo2_cnn_lstm_default")
 
-        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=True)
+        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
         model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.99,
-                     verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_and_shaping_log/")
+                     verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_log/")
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False)
