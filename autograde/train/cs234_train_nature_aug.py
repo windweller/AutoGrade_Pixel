@@ -1151,42 +1151,6 @@ class Config():
     learning_start = 50000
 
 
-def main():
-    import os
-    os.environ['SDL_VIDEODRIVER'] = 'dummy'
-    os.environ['SDL_AUDIODRIVER'] = 'dsp'
-
-    config = Config()
-
-    # make env
-    program = Program()
-    program.set_correct()
-    # program.set_correct_with_theme()
-
-    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False)
-    env = MaxAndSkipEnv(env, skip=2)  # maybe 2 is better?
-    env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1),  # (80, 80, 1),
-                        overwrite_render=True)
-
-    env = TimeLimit(env, max_episode_steps=1500)
-
-    # exploration strategy
-    exp_schedule = LinearExploration(env, config.eps_begin,
-                                     config.eps_end, config.eps_nsteps)
-
-    # learning rate schedule
-    lr_schedule = LinearSchedule(config.lr_begin, config.lr_end,
-                                 config.lr_nsteps)
-
-    # train model
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-
-    with tf.Session(config=config):
-        model = NatureQN(env, config)
-        model.run(exp_schedule, lr_schedule)
-
-
 def replay_human_play_with_gym_wrapper(human_play_npz, seed, max_len=1500, max_skip=2):
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
@@ -1227,4 +1191,37 @@ if __name__ == '__main__':
     # test if human play can be loaded and played correctly
     # This works!!!!
     replay_human_play_with_gym_wrapper("human_actions_2222_max_skip_2_converted.npz", seed=2222, max_skip=2)
-    main()
+
+    import os
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    os.environ['SDL_AUDIODRIVER'] = 'dsp'
+
+    config = Config()
+
+    # make env
+    program = Program()
+    program.set_correct()
+    # program.set_correct_with_theme()
+
+    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+    env = MaxAndSkipEnv(env, skip=2)  # maybe 2 is better?
+    env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1),  # (80, 80, 1),
+                        overwrite_render=True)
+
+    env = TimeLimit(env, max_episode_steps=1500)
+
+    # exploration strategy
+    exp_schedule = LinearExploration(env, config.eps_begin,
+                                     config.eps_end, config.eps_nsteps)
+
+    # learning rate schedule
+    lr_schedule = LinearSchedule(config.lr_begin, config.lr_end,
+                                 config.lr_nsteps)
+
+    # train model
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+
+    with tf.Session(config=config):
+        model = NatureQN(env, config)
+        model.run(exp_schedule, lr_schedule)
