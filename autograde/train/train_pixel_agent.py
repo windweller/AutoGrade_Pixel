@@ -89,7 +89,7 @@ def evaluate_ppo_policy(model, env, n_training_envs, n_eval_episodes=10, determi
             zero_completed_obs[0, :] = obs
 
             action, state = model.predict(zero_completed_obs, state=state, deterministic=deterministic)
-            obs, reward, done, _info = env.step(action[0])
+            obs, reward, done, _info = env.step([action[0]])
             episode_reward += reward
             if callback is not None:
                 callback(locals(), globals())
