@@ -2,6 +2,7 @@ import gym
 import numpy as np
 from collections import deque
 from gym import spaces
+from gym.wrappers import TimeLimit
 import tensorflow as tf
 
 import os
@@ -10,6 +11,10 @@ from autograde.train.cs234_utils import ReplayBuffer, Progbar, get_logger, expor
 from autograde.rl_envs.bounce_env import BouncePixelEnv, Program, ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO
 
 import pyglet
+
+"""
+Augmented to add human reocrded play 
+"""
 
 
 class SimpleImageViewer(object):
@@ -574,7 +579,7 @@ class QN(object):
         env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False)
         env = gym.wrappers.Monitor(env, self.config.record_path, video_callable=lambda x: True, resume=True)
         env = MaxAndSkipEnv(env, skip=self.config.skip_frame)
-        env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1), # (80, 80, 1),
+        env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1),  # (80, 80, 1),
                             overwrite_render=self.config.overwrite_render)
         self.evaluate(env, 1)
 
@@ -1101,65 +1106,69 @@ class NatureQN(Linear):
         ######################## END YOUR CODE #######################
         return out
 
-class config():
+
+class Config():
     # env config
-    render_train     = False
-    render_test      = False
-    env_name         = "Pong-v0"
+    render_train = False
+    render_test = False
+    env_name = "Pong-v0"
     overwrite_render = True
-    record           = True
-    high             = 255.
+    record = True
+    high = 255.
 
     # output config
-    output_path  = "results/q5_train_atari_nature/"
+    output_path = "results/q5_train_atari_nature/"
     model_output = output_path + "model.weights/"
-    log_path     = output_path + "log.txt"
-    plot_output  = output_path + "scores.png"
-    record_path  = output_path + "monitor/"
+    log_path = output_path + "log.txt"
+    plot_output = output_path + "scores.png"
+    record_path = output_path + "monitor/"
 
     # model and training config
     num_episodes_test = 50
-    grad_clip         = True
-    clip_val          = 10
-    saving_freq       = 250000
-    log_freq          = 50
-    eval_freq         = 250000
-    record_freq       = 250000
-    soft_epsilon      = 0.05
+    grad_clip = True
+    clip_val = 10
+    saving_freq = 250000
+    log_freq = 50
+    eval_freq = 250000
+    record_freq = 250000
+    soft_epsilon = 0.05
 
     # nature paper hyper params
-    nsteps_train       = 5000000
-    batch_size         = 32
-    buffer_size        = 1000000
+    nsteps_train = 5000000
+    batch_size = 32
+    buffer_size = 1000000
     target_update_freq = 10000
-    gamma              = 0.99
-    learning_freq      = 4
-    state_history      = 4
-    skip_frame         = 4
-    lr_begin           = 0.00025
-    lr_end             = 0.00005
-    lr_nsteps          = nsteps_train/2
-    eps_begin          = 1
-    eps_end            = 0.1
-    eps_nsteps         = 1000000
-    learning_start     = 50000
+    gamma = 0.99
+    learning_freq = 4
+    state_history = 4
+    skip_frame = 4
+    lr_begin = 0.00025
+    lr_end = 0.00005
+    lr_nsteps = nsteps_train / 2
+    eps_begin = 1
+    eps_end = 0.1
+    eps_nsteps = 1000000
+    learning_start = 50000
 
 
-if __name__ == '__main__':
+def main():
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
     os.environ['SDL_AUDIODRIVER'] = 'dsp'
 
-    config = config()
+    config = Config()
 
     # make env
     program = Program()
-    program.set_correct_with_theme()
+    program.set_correct()
+    # program.set_correct_with_theme()
 
     env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False)
-    env = MaxAndSkipEnv(env, skip=4)
-    env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1), # (80, 80, 1),
+    env = MaxAndSkipEnv(env, skip=2)  # maybe 2 is better?
+    env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1),  # (80, 80, 1),
                         overwrite_render=True)
+
+    env = TimeLimit(env, max_episode_steps=1500)
 
     # exploration strategy
     exp_schedule = LinearExploration(env, config.eps_begin,
@@ -1170,5 +1179,48 @@ if __name__ == '__main__':
                                  config.lr_nsteps)
 
     # train model
-    model = NatureQN(env, config)
-    model.run(exp_schedule, lr_schedule)
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+
+    with tf.Session(config=config):
+        model = NatureQN(env, config)
+        model.run(exp_schedule, lr_schedule)
+
+
+def replay_human_play_with_gym_wrapper(human_play_npz, seed, max_len=1500, max_skip=2):
+    # we won't show videos, because it's harder.
+    # We just want to prove that we get the reward
+    program = Program()
+    program.set_correct()
+    # program.set_correct_with_theme()
+
+    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+    env = MaxAndSkipEnv(env, skip=2)  # maybe 2 is better?
+    env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1),  # (80, 80, 1),
+                        overwrite_render=True)
+
+    # before MaxSkip, we can do 3000
+    # since MaxSkip does 2 actions at once, we half it to 1500
+    env = TimeLimit(env, max_episode_steps=max_len)
+
+    human_actions = np.load("../rl_envs/bounce_humanplay_recordings/" + human_play_npz)['frames']
+
+    print("number of human actions: {}".format(human_actions.shape[0]))
+
+    obs = env.reset()
+    env.seed(seed)
+    for i in range(max_len):
+        # action = np.random.randint(env.action_space.n, size=1)
+        action = human_actions[i]
+        obs, rewards, dones, info = env.step(action)
+        if rewards != 0:
+            print(rewards)
+        if dones:
+            break
+
+
+if __name__ == '__main__':
+    # test if human play can be loaded and played correctly
+    # This works!!!!
+    replay_human_play_with_gym_wrapper("human_actions_2222_max_skip_2_converted.npz", seed=2222, max_skip=2)
+    main()
