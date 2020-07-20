@@ -1107,7 +1107,7 @@ class NatureQN(Linear):
         return out
 
 
-class config():
+class Config():
     # env config
     render_train = False
     render_test = False
@@ -1196,7 +1196,7 @@ if __name__ == '__main__':
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
     os.environ['SDL_AUDIODRIVER'] = 'dsp'
 
-    config = config()
+    config = Config()
 
     # make env
     program = Program()
@@ -1219,9 +1219,9 @@ if __name__ == '__main__':
                                  config.lr_nsteps)
 
     # train model
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
+    tf_config = tf.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
 
-    with tf.Session(config=config):
+    with tf.Session(config=tf_config):
         model = NatureQN(env, config)
         model.run(exp_schedule, lr_schedule)
