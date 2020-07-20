@@ -110,6 +110,10 @@ def evaluate_ppo_policy(model, env, n_training_envs, n_eval_episodes=10, determi
     return mean_reward, std_reward
 
 def main():
+    import os
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    os.environ['SDL_AUDIODRIVER'] = 'dsp'
+    
     program = Program()
     program.set_correct()
 
