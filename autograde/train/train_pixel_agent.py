@@ -24,10 +24,10 @@ os.environ['SDL_VIDEODRIVER'] = 'dummy'
 
 # not worrying about seed right now...
 
-def get_env_fn(program, reward_type, reward_shaping):
+def get_env_fn(program, reward_type, reward_shaping, num_ball_to_win):
     # we add all necessary wrapper here
     def make_env():
-        env = BouncePixelEnv(program, reward_type, reward_shaping)
+        env = BouncePixelEnv(program, reward_type, reward_shaping, num_ball_to_win=num_ball_to_win)
         # env = WarpFrame(env)
         # env = ScaledFloatFrame(env)
         env = ResizeFrame(env)
@@ -37,8 +37,8 @@ def get_env_fn(program, reward_type, reward_shaping):
     return make_env
 
 
-def make_general_env(program, frame_stack, num_envs, reward_type, reward_shaping, seed=0):
-    base_env_fn = get_env_fn(program, reward_type, reward_shaping)
+def make_general_env(program, frame_stack, num_envs, reward_type, reward_shaping, num_ball_to_win):
+    base_env_fn = get_env_fn(program, reward_type, reward_shaping, num_ball_to_win)
 
     if num_envs > 1:
         env = SubprocVecEnv([base_env_fn for _ in range(num_envs)])
@@ -128,12 +128,12 @@ def main():
         checkpoint_callback = CheckpointCallback(save_freq=250000, save_path="./saved_models/self_minus_finish_reward_and_shaping/",
                                                  name_prefix="ppo2_cnn_lstm_default")
 
-        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1)
         model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.99,
                      verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_log/")
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
-        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1)
         mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
 
         print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
@@ -145,7 +145,7 @@ def main():
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
-        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1)
         # AssertionError: You must pass only one environment when using this function
         # But then, the NN is expecting shape of (8, ...)
         mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
@@ -157,7 +157,7 @@ def test_observations():
     # ========= Execute some random actions and observe ======
     program = Program()
     program.set_correct()
-    env = make_general_env(program, 1, 1, ONLY_SELF_SCORE, False)
+    env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, False, num_ball_to_win=1)
 
     import numpy as np
     from autograde.rl_envs.utils import SmartImageViewer
@@ -165,6 +165,7 @@ def test_observations():
     viewer = SmartImageViewer()
 
     obs = env.reset()
+    print(env.action_space.n)
     for i in range(1000):
         action = np.random.randint(env.action_space.n, size=1)
         obs, rewards, dones, info = env.step(action)
@@ -173,12 +174,17 @@ def test_observations():
         viewer.imshow(obs)
         if rewards[0] != 0:
             print(rewards)
+
+        if dones[0]:
+            break
+
+    print(i)
     env.close()
 
 if __name__ == '__main__':
-    main()
+    # main()
 
-    # test_observations()
+    test_observations()
 
     # ====== Some rough testing code =====
     # program = Program()
