@@ -1274,7 +1274,7 @@ class Config():
     high = 255.
 
     # output config
-    output_path = "results/q5_train_atari_nature_with_human/"
+    output_path = "results/q5_train_atari_nature_one_ball/"
     model_output = output_path + "model.weights/"
     log_path = output_path + "log.txt"
     plot_output = output_path + "scores.png"
@@ -1291,7 +1291,7 @@ class Config():
     soft_epsilon = 0.05
 
     # nature paper hyper params
-    nsteps_train = 5000000
+    nsteps_train = 3000000
     batch_size = 32
     buffer_size = 1000000
     target_update_freq = 10000
@@ -1304,8 +1304,8 @@ class Config():
     lr_nsteps = nsteps_train / 2
     eps_begin = 1
     eps_end = 0.1
-    eps_nsteps = 2000000  # 1000000 # it probably decays too quickly!
-    learning_start = 50000
+    eps_nsteps = 1500000  # 1000000 # it probably decays too quickly!
+    learning_start = 20000 # 50000
 
     # human play guidance
     use_human_play = False
@@ -1329,12 +1329,13 @@ def main(args):
     program.set_correct()
     # program.set_correct_with_theme()
 
-    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                         finish_reward=0)
     env = MaxAndSkipEnv(env, skip=2)  # maybe 2 is better?
     env = PreproWrapper(env, prepro=greyscale, shape=(100, 100, 1),  # (80, 80, 1),
                         overwrite_render=True)
 
-    env = TimeLimit(env, max_episode_steps=1500)
+    env = TimeLimit(env, max_episode_steps=500) # 1500
 
     # exploration strategy
     exp_schedule = LinearExploration(env, config.eps_begin,
@@ -1395,7 +1396,7 @@ def replay_human_play_with_gym_wrapper(human_play_npz, seed, max_len=1500, max_s
 if __name__ == '__main__':
     # test if human play can be loaded and played correctly
     # This works!!!!
-    replay_human_play_with_gym_wrapper("human_actions_2222_max_skip_2_converted.npz", seed=2222, max_skip=2)
+    # replay_human_play_with_gym_wrapper("human_actions_2222_max_skip_2_converted.npz", seed=2222, max_skip=2)
 
     import argparse
 
