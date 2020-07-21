@@ -83,10 +83,10 @@ def get_env_fn(program, reward_type, reward_shaping, max_skip, num_ball_to_win):
         # env = WarpFrame(env)
         # env = ScaledFloatFrame(env)
         env = ResizeFrame(env)
+        env = GrayScaleFrame(env)
         env = FrameStack(env, 4)
-        # env = GrayScaleFrame(env)
         env = MaxAndSkipEnv(env, skip=max_skip)
-        env = WarpFrame(env)
+        # env = WarpFrame(env)
         # env = ScaledFloatFrame(env)
         return env
 
