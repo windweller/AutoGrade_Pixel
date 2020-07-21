@@ -126,6 +126,10 @@ def test_observations():
 
 
 def main():
+    import os
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    os.environ['SDL_AUDIODRIVER'] = 'dsp'
+    
     program = Program()
     program.set_correct_with_theme()
 
