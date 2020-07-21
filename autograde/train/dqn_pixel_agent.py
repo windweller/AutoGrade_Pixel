@@ -93,7 +93,7 @@ def get_env_fn(program, reward_type, reward_shaping, max_skip, num_ball_to_win):
     return make_env
 
 
-def make_general_env(program, max_skip, num_envs, reward_type, reward_shaping, num_ball_to_win):
+def make_general_env(program, max_skip, reward_type, reward_shaping, num_ball_to_win):
     base_env_fn = get_env_fn(program, reward_type, reward_shaping, max_skip, num_ball_to_win)
 
     env = base_env_fn()
@@ -105,7 +105,7 @@ def test_observations():
     # ========= Execute some random actions and observe ======
     program = Program()
     program.set_correct()
-    env = make_general_env(program, 1, 1, ONLY_SELF_SCORE, False, num_ball_to_win=1)
+    env = make_general_env(program, 2, ONLY_SELF_SCORE, False, num_ball_to_win=1)
 
     import numpy as np
     from autograde.rl_envs.utils import SmartImageViewer
@@ -129,12 +129,12 @@ def main():
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
     os.environ['SDL_AUDIODRIVER'] = 'dsp'
-    
+
     program = Program()
     program.set_correct_with_theme()
 
     # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
-    env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1)
+    env = make_general_env(program, 2, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1)
     print("Number of environments: {}".format(env.num_envs))
 
     config = tf.ConfigProto()
@@ -151,7 +151,7 @@ def main():
                     verbose=1, tensorboard_log="./tensorboard_self_minus_finish_log/")
 
         print("Evaluating initial performance...")
-        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1)
+        single_env = make_general_env(program, 2, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1)
         mean_reward, std_reward = evaluate_policy(model, single_env, n_eval_episodes=10)
         print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
@@ -163,7 +163,7 @@ def main():
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
-        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1)
+        single_env = make_general_env(program, 2, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1)
         # AssertionError: You must pass only one environment when using this function
         # But then, the NN is expecting shape of (8, ...)
         mean_reward, std_reward = evaluate_policy(model, single_env, n_eval_episodes=10)
