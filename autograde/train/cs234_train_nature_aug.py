@@ -1274,7 +1274,7 @@ class Config():
     high = 255.
 
     # output config
-    output_path = "results/q5_train_atari_nature/"
+    output_path = "results/q5_train_atari_nature_with_human/"
     model_output = output_path + "model.weights/"
     log_path = output_path + "log.txt"
     plot_output = output_path + "scores.png"
