@@ -49,9 +49,10 @@ class PyGamePixelEnv(object):
 
 
 class BounceHumanPlayRecord(gym.Env, PyGamePixelEnv):
-    def __init__(self, program: Program, recording_dir=None):
+    def __init__(self, program: Program, recording_dir=None, num_ball_to_win=1):
 
         self.program = program
+        self.num_ball_to_win= num_ball_to_win
 
         self.recording_dir = recording_dir
         os.makedirs(recording_dir, exist_ok=True)
@@ -120,7 +121,7 @@ class BounceHumanPlayRecord(gym.Env, PyGamePixelEnv):
                         running = False  # and we let the saving happen
 
                 # we also have a rule of cutting off
-                if self.bounce.score_board.own == 5 or self.bounce.score_board.opponent == 5:
+                if self.bounce.score_board.own == self.num_ball_to_win or self.bounce.score_board.opponent == self.num_ball_to_win:
                     running = False
 
         if not running:
@@ -128,10 +129,10 @@ class BounceHumanPlayRecord(gym.Env, PyGamePixelEnv):
             print("Number of frames: {}".format(iters))
             if self.recording_dir is not None:
                 np.savez_compressed(
-                    open(pjoin(self.recording_dir, "human_actions_{}_max_skip_{}.npz".format(seed, max_skip)), 'wb'),
+                    open(pjoin(self.recording_dir, "human_actions_{}_max_skip_{}_1_ball.npz".format(seed, max_skip)), 'wb'),
                     frames=np.array(self.recorded_actions, dtype=np.int))
 
-                return pjoin(self.recording_dir, "human_actions_{}.npz".format(seed))
+                return pjoin(self.recording_dir, "human_actions_{}_max_skip_{}_1_ball.npz".format(seed, max_skip))
 
     def run(self, seed=None, max_len=None, debug=False):
 
@@ -196,7 +197,7 @@ class BounceHumanPlayRecord(gym.Env, PyGamePixelEnv):
                     running = False  # and we let the saving happen
 
             # we also have a rule of cutting off
-            if self.bounce.score_board.own == 5 or self.bounce.score_board.opponent == 5:
+            if self.bounce.score_board.own == self.num_ball_to_win or self.bounce.score_board.opponent == self.num_ball_to_win:
                 running = False
 
         if not running:
@@ -462,7 +463,7 @@ def record_human_play_to_actions(program_name, seed, max_len=3000, max_skip=1):
     program.load("../envs/bounce_programs/" + program_name)
 
     # the goal is to record some human play
-    app = BounceHumanPlayRecord(program, "./bounce_humanplay_recordings/")
+    app = BounceHumanPlayRecord(program, "./bounce_humanplay_recordings/", num_ball_to_win=1)
     # we actually override initial positions after seeding
     # so printing won't tell us the true positions we sampled
 
@@ -483,7 +484,7 @@ def replay_human_play(program_name, human_play_npz, seed, max_len=3000):
 
     program = Program()
     program.load("../envs/bounce_programs/" + program_name)
-    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, False)
+    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, False, num_ball_to_win=1, finish_reward=0)
 
     from autograde.rl_envs.utils import SmartImageViewer
 
@@ -548,9 +549,8 @@ def verify_and_convert_human_play_to_max_skip(human_play_npz, seed, max_len=3000
 
     assert len(converted_actions) == human_actions.shape[0] / 2
     np.savez_compressed(open(
-        pjoin("./bounce_humanplay_recordings/", "human_actions_{}_max_skip_{}_converted.npz".format(seed, max_skip)),
-        'wb'),
-                        frames=np.array(converted_actions, dtype=np.int))
+        pjoin("./bounce_humanplay_recordings/", "human_actions_{}_max_skip_{}_1_ball_converted.npz".format(seed, max_skip)),
+        'wb'), frames=np.array(converted_actions, dtype=np.int))
 
 
 def replay_human_play_with_sticky_actions(program_name, human_play_npz, seed, max_len=3000, max_skip=2):
@@ -558,7 +558,7 @@ def replay_human_play_with_sticky_actions(program_name, human_play_npz, seed, ma
 
     program = Program()
     program.load("../envs/bounce_programs/" + program_name)
-    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, False)
+    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, False, num_ball_to_win=1, finish_reward=0)
 
     from autograde.rl_envs.utils import SmartImageViewer
 
@@ -607,9 +607,17 @@ if __name__ == '__main__':
     # record_human_play_to_actions("correct_sample.json", seed=2222, max_skip=2)
     # record_human_play_to_actions("correct_sample.json", seed=4141)
 
+    # record_human_play_to_actions("correct_sample.json", seed=1414, max_skip=2, max_len=1000)
+    # record_human_play_to_actions("correct_sample.json", seed=2121, max_skip=2, max_len=1000)
+    # record_human_play_to_actions("correct_sample.json", seed=5555, max_skip=2, max_len=1000)
+
     # replay_human_play("correct_sample.json", "human_actions_2222.npz", seed=2222)
 
     # verify_and_convert_human_play_to_max_skip("human_actions_2222_max_skip_2.npz", seed=2222, max_skip=2)
+
+    verify_and_convert_human_play_to_max_skip("human_actions_1414_max_skip_2_1_ball.npz", seed=1414, max_skip=2)
+    verify_and_convert_human_play_to_max_skip("human_actions_2121_max_skip_2_1_ball.npz", seed=2121, max_skip=2)
+    verify_and_convert_human_play_to_max_skip("human_actions_5555_max_skip_2_1_ball.npz", seed=5555, max_skip=2)
 
     # so it should be 1500 time steps, not 3000...but check Monitor counts real frames or agent actions
 
