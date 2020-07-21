@@ -323,7 +323,7 @@ class BouncePixelEnv(gym.Env):
         oppo_score_diff = oppo_score - prev_oppo_score
 
         done = False
-        if score == 5 or oppo_score == 5:
+        if score == self.num_ball_to_win or oppo_score == self.num_ball_to_win:
             done = True
 
         # considering "discount", reward should be higher
