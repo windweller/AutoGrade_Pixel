@@ -32,7 +32,7 @@ def get_env_fn(program, reward_type, reward_shaping, num_ball_to_win):
         # env = ScaledFloatFrame(env)
         env = ResizeFrame(env)
         # env = ScaledFloatFrame(env)
-        env = TimeLimit(env, max_episode_steps=3000)  # no skipping, it should be 3000. With skip, do 3000 / skip.
+        env = TimeLimit(env, max_episode_steps=1000) # 20 seconds  # no skipping, it should be 3000. With skip, do 3000 / skip.
         return env
     return make_env
 
