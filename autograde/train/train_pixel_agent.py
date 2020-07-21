@@ -27,7 +27,8 @@ os.environ['SDL_VIDEODRIVER'] = 'dummy'
 def get_env_fn(program, reward_type, reward_shaping, num_ball_to_win):
     # we add all necessary wrapper here
     def make_env():
-        env = BouncePixelEnv(program, reward_type, reward_shaping, num_ball_to_win=num_ball_to_win)
+        env = BouncePixelEnv(program, reward_type, reward_shaping, num_ball_to_win=num_ball_to_win,
+                             finish_reward=0)
         # env = WarpFrame(env)
         # env = ScaledFloatFrame(env)
         env = ResizeFrame(env)

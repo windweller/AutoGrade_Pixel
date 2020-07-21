@@ -276,7 +276,8 @@ class BouncePixelEnv(gym.Env):
     """
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    def __init__(self, program: Program, reward_type, reward_shaping=False, num_ball_to_win=5):
+    def __init__(self, program: Program, reward_type, reward_shaping=False, num_ball_to_win=5,
+                 finish_reward=100):
 
         assert reward_type in {ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO}
         self.reward_type = reward_type
@@ -287,6 +288,7 @@ class BouncePixelEnv(gym.Env):
         self.viewer = None
         self.reward_shaping = reward_shaping
         self.num_ball_to_win = num_ball_to_win
+        self.finish_reward = finish_reward
 
         self.program = program
 
@@ -340,9 +342,9 @@ class BouncePixelEnv(gym.Env):
         # Win everything: 200
         # Lose everything: -150
         if done and score == self.num_ball_to_win:
-            reward += 100  # + 120  (120 + 80 = 200)
+            reward += self.finish_reward  # 100  # + 120  (120 + 80 = 200)
         elif done and oppo_score == self.num_ball_to_win:
-            reward -= 100  # - 110 (-40 - 110 = -150)
+            reward -= self.finish_reward  # 100  # - 110 (-40 - 110 = -150)
 
         # reward shaping
         # it's only ON when there's only one ball, it's defined as the distance between ball to goal
