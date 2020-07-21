@@ -182,9 +182,9 @@ def test_observations():
     env.close()
 
 if __name__ == '__main__':
-    # main()
+    main()
 
-    test_observations()
+    # test_observations()
 
     # ====== Some rough testing code =====
     # program = Program()
