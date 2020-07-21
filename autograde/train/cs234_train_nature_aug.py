@@ -1208,6 +1208,7 @@ class NatureQNWithHuman(NatureQN):
                 file_name, seed = self.config.human_play_file_names[sampled_idx]
                 human_actions = np.load(self.config.human_play_dir + file_name)['frames']
 
+                print("")
                 print("Performing human policy idx {}".format(sampled_idx))
 
                 # now execute this!
@@ -1220,7 +1221,7 @@ class NatureQNWithHuman(NatureQN):
 
                     # replay memory stuff
                     idx = replay_buffer.store_frame(state)
-                    q_input = replay_buffer.encode_recent_observation()
+                    # q_input = replay_buffer.encode_recent_observation()
 
                     # choose an action according to human policy
                     action = human_actions[action_idx]
@@ -1241,7 +1242,7 @@ class NatureQNWithHuman(NatureQN):
 
                     action_idx += 1
 
-                print("Human policy total reward: {}".format(total_reward))
+                print("Human policy total reward: {}\n".format(total_reward))
 
                 rewards.append(total_reward)  # adding to total rewards
 
@@ -1303,7 +1304,7 @@ class Config():
     lr_nsteps = nsteps_train / 2
     eps_begin = 1
     eps_end = 0.1
-    eps_nsteps = 4000000  # 1000000 # it probably decays too quickly!
+    eps_nsteps = 2000000  # 1000000 # it probably decays too quickly!
     learning_start = 50000
 
     # human play guidance
