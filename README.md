@@ -33,3 +33,4 @@ Run:
 1. GrayScale + FrameStack is needed for non-recurrent policy (it squashes RGB 3 channels into 1 channel, and framestack extends that dimension to N).
 There currently is a weird problem in Grayscale where the output image is skewed.
 2. ReSize wrapper is enough for recurrent policy.
+3. For this environment, you need to add `gym.wrappers.TimLimit()`, otherwise it won't train.

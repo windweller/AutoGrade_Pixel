@@ -1,4 +1,4 @@
-{"when run": ["launch new ball", "set 'retro' scene", "set 'retro' ball", "set 'retro' paddle"],
+{"when run": ["launch new ball", "set 'random' scene", "set 'random' ball", "set 'random' paddle"],
   "when left arrow": ["move left"],
   "when right arrow": ["move right"],
   "when ball hits paddle": ["bounce ball"],
@@ -7,4 +7,3 @@
                         "launch new ball"],
   "when ball misses paddle": ["score opponent point",
                               "launch new ball"]}
-

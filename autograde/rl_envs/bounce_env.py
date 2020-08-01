@@ -348,23 +348,8 @@ class BouncePixelEnv(gym.Env):
             reward -= self.finish_reward  # 100  # - 110 (-40 - 110 = -150)
 
         # reward shaping
-        # it's only ON when there's only one ball, it's defined as the distance between ball to goal
-        # TODO: this particular reward shaping is wrong...it doesn't prescribe to the correct formula
         if self.reward_shaping:
-            assert len(
-                self.bounce.ball_group.exist_balls) == 1, "reward shaping is only for 1 ball situation during training"
-            curr_ball = list(self.bounce.ball_group.exist_balls.values())[0]
-            x, y = curr_ball.body.position
-            if y <= 400 and x >= 0 and x <= 400:  # flying off the screen on top (through the goal)
-                dist_to_goal = np.sqrt((400 - y) * (400 - y) + (x - 200) * (x - 200))
-                dist_to_goal /= 60  # SCALE = 30, then / 2)
-                dist_to_goal /= 50  # FPS (1 sec)
-                # dist_to_goal = max(dist_to_goal, -5)
-            else:
-                dist_to_goal = 0
-
-            dist_reward = -dist_to_goal
-            reward += dist_reward
+            raise NotImplementedError
 
         # make reward a bit smaller...
         # reward /= 10
@@ -516,7 +501,6 @@ def replay_human_play(program_name, human_play_npz, seed, max_len=3000):
 
     env.close()
 
-# TODO: 4. Add the sequence into CS234 Training code (Emma is most comfortable with it; and you already got it running...so it's simpler than starting from scratch)
 
 def grouped(iterable, n):
     "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
@@ -524,8 +508,6 @@ def grouped(iterable, n):
 
 
 def verify_and_convert_human_play_to_max_skip(human_play_npz, seed, max_len=3000, max_skip=2):
-    # TODO: save a new npz that conforms max skip
-    # TODO: we should check both 2 and 4
     human_actions = np.load("./bounce_humanplay_recordings/" + human_play_npz)['frames']  # this is a misnomer
     print("first check if it's divisible by max_skip, or we have to pad the end: {}".format(
         human_actions.shape[0] % max_skip == 0))

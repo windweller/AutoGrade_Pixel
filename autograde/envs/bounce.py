@@ -48,7 +48,10 @@ import pymunk.pygame_util
 import json
 from abc import ABC, abstractmethod
 
-from . import utils_seeding as seeding
+try:
+    from . import utils_seeding as seeding
+except:
+    import utils_seeding as seeding
 
 # ==== Settings ====
 
@@ -1207,14 +1210,15 @@ if __name__ == '__main__':
     program = Program()
 
     # program.set_correct()
-    program.set_correct_with_theme()
+    # program.set_correct_with_theme()
     # program.load("./bounce_programs/change_scene.json")
     # program.load("./bounce_programs/demo1.json")
     # program.load("./bounce_programs/easier_demo2.json")
     # program.load("./bounce_programs/speed_test.json")
+    program.load("./bounce_programs/mixed_theme_train.json")
     app = Bounce(program)
-    app.seed(2222)
-    app.ball_group.get_new_ball_init()
-    print("assignment counter:", app.ball_group.assignment_counter)
-    print("Ball positions:", app.ball_group.ball_inits[:8])
+    # app.seed(2222)
+    # app.ball_group.get_new_ball_init()
+    # print("assignment counter:", app.ball_group.assignment_counter)
+    # print("Ball positions:", app.ball_group.ball_inits[:8])
     app.run()
