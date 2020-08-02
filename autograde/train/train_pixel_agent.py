@@ -170,7 +170,8 @@ def train_random_mixed_theme():
     os.environ['SDL_AUDIODRIVER'] = 'dsp'
 
     program = Program()
-    program.set_correct()
+    # program.set_correct()
+    program.load("./autograde/envs/bounce_programs/mixed_theme_train.json")
 
     # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
     # TODO: if wrap monitor, we can get episodic reward
