@@ -186,8 +186,10 @@ def train_random_mixed_theme():
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
                                max_steps=1000, finish_reward=0)
         # not n_step=256, because shorter helps us learn a better policy; 128 = 2 seconds out
-        model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.99,
-                     verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_reward_mixed_theme_log/")
+        # model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.99,
+        #              verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_reward_mixed_theme_log/")
+
+        model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
@@ -197,9 +199,9 @@ def train_random_mixed_theme():
         print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
         # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
-        model.learn(total_timesteps=5000000 * 2, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')  # 10M
+        model.learn(total_timesteps=5000000 * 3, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')  # 10M
 
-        model.save("./saved_models/self_minus_finish_reward_mixed_theme/")
+        model.save("./saved_models/self_minus_finish_reward_mixed_theme")
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
