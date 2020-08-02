@@ -190,6 +190,11 @@ def train_random_mixed_theme():
         #              verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_reward_mixed_theme_log/")
 
         model = PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
+        model.set_env(env)
+        model.tensorboard_log = "./tensorboard_self_minus_finish_reward_mixed_theme_log/"
+        model.verbose = 1
+        model.nminibatches = 4
+        model.learning_rate = 5e-4
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
