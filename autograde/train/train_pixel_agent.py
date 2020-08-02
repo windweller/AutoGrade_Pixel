@@ -189,7 +189,7 @@ def train_random_mixed_theme():
         # model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.99,
         #              verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_reward_mixed_theme_log/")
 
-        model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
+        model = PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
