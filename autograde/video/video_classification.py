@@ -29,7 +29,6 @@ random.seed(5512106458)
 class AnomalyDataset(tDataset):
     def __init__(self, pos_dir=None,
                  neg_dir=None,
-                 neg_prefix="broken_videos",
                  no_normalization=True,
                  mean=0., std=1.,
                  train_num_cap=-1,
@@ -44,7 +43,6 @@ class AnomalyDataset(tDataset):
         self.std = std
         self.no_normalization = no_normalization
 
-        self.neg_prefix = neg_prefix
 
         self.frameskip = frameskip  # this is "period" on EchoNet
         self.maxframe = maxframe  # this is "length" on EchoNet
@@ -108,7 +106,8 @@ class AnomalyDataset(tDataset):
         else:
             start = np.random.choice(f - (length - 1) * self.frameskip, self.crops)
 
-        target = 0 if self.neg_prefix in self.fnames[index] else 1
+        # target = 0 if self.neg_prefix in self.fnames[index] else 1
+        target = 0 if self.fnames[index] in self.neg_fnames else 1
         target = np.array(target, dtype=np.float32)
 
         # Select random crops

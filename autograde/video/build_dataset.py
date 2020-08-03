@@ -114,7 +114,7 @@ def generate_toy_program_videos():
     gvp = GenerateVideoToy(corr_folder, folder, model_file, n_train_env=8, save_dir="./rec_vidoes_toy_programs/")
     gvp.load_model()
 
-    # gvp.generate_training(20)
+    gvp.generate_training(20)
     gvp.generate_test(20)
 
 if __name__ == '__main__':
