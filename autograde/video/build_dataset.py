@@ -55,8 +55,6 @@ class GenerateVideoToy(object):
     def record_program(self, program_json, program_name, program_label='pos_videos', num_videos=20):
         # program_label={'pos_train', 'neg_train', 'pos_test', 'neg_test'}
 
-        assert program_label in {'pos_train', 'neg_train', 'pos_test', 'neg_test'}
-
         program = Program()
         program.loads(program_json)
 
@@ -112,11 +110,11 @@ def generate_toy_program_videos():
     folder = pjoin(pathlib.Path(__file__).parent.parent.absolute(), "envs/bounce_programs/broken_small")
     corr_folder = pjoin(pathlib.Path(__file__).parent.parent.absolute(), "envs/bounce_programs/correct_small")
 
-    model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(), "./train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+    model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(), "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
     gvp = GenerateVideoToy(corr_folder, folder, model_file, n_train_env=8, save_dir="./rec_vidoes_toy_programs/")
     gvp.load_model()
 
-    gvp.generate_training(20)
+    # gvp.generate_training(20)
     gvp.generate_test(20)
 
 if __name__ == '__main__':
