@@ -61,7 +61,8 @@ RANDOM = 'random'
 
 # we change speed to velocity instead
 # and do one time update
-speed_choices = ['random', 'very slow', 'slow', 'normal', 'fast', 'very fast']
+speed_text_available = ['random', 'very slow', 'slow', 'normal', 'fast', 'very fast']
+speed_choices = ['very slow', 'slow', 'normal', 'fast', 'very fast']  #
 speed_dict = {
     'very slow': 100, 'slow': 200, 'normal': 300, 'fast': 400, 'very fast': 500
 }
@@ -158,6 +159,13 @@ class Config(object):
     def load(self, file_name):
         # this method overrides
         self.config_dict = json.load(open(file_name))
+        self.update()
+
+    def loads(self, json_obj):
+        if type(json_obj) == str:
+            json_obj = json.loads(json_obj)
+        assert type(json_obj) == dict
+        self.config_dict = json_obj
         self.update()
 
 
@@ -831,8 +839,12 @@ class ShadowEngine(object):
 
     def extract_speed(self, cmd):
         speed_text = cmd.split("'")[1]
+        assert  speed_text in speed_text_available
+
         if speed_text == 'random':
             speed_text = self.np_random.choice(speed_choices)  # choose a non-random option
+
+        assert speed_text in speed_choices
         return speed_text
 
     def extract_theme(self, cmd):
@@ -1191,7 +1203,7 @@ class Bounce(object):
 
         # after a series of update...
         self.bg.draw(self.screen)
-        # self.score_board.draw(self.screen) # for RL, no display of scoreboard
+        self.score_board.draw(self.screen) # for RL, no display of scoreboard
 
         # draw PyMunk objects (don't need this when actually playing)
         # app.space.debug_draw(draw_options)

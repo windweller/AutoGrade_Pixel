@@ -8,6 +8,8 @@
 
 `video`: put video-related training in there
 
+`grading`: Preprocessing student programs, running to evaluate RL agent and Video classifier, tally result.
+
 # Installation
 
 `pip install -r requirements.txt`

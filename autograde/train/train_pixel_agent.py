@@ -102,7 +102,7 @@ def evaluate_ppo_policy(model, env, n_training_envs, n_eval_episodes=10, determi
                 callback(locals(), globals())
             episode_length += 1
             if render:
-                env.render()
+                env.render(mode='human')
         episode_rewards.append(episode_reward)
         episode_lengths.append(episode_length)
 
@@ -164,6 +164,7 @@ def train():
 
         env.close()
 
+
 def train_random_mixed_theme():
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
@@ -205,7 +206,66 @@ def train_random_mixed_theme():
         print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
         # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
-        model.learn(total_timesteps=5000000 * 3, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')  # 10M
+        model.learn(total_timesteps=5000000 * 3, callback=CallbackList([checkpoint_callback]),
+                    tb_log_name='PPO2')  # 10M
+
+        model.save("./saved_models/self_minus_finish_reward_mixed_theme")
+
+        # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
+        # recurrent policy, no stacking!
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                                      max_steps=1000, finish_reward=0)
+        # AssertionError: You must pass only one environment when using this function
+        # But then, the NN is expecting shape of (8, ...)
+        mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
+        print("final model mean reward {}, std reward {}".format(mean_reward, std_reward))
+
+        env.close()
+
+
+def train_random_ball_setting():
+    import os
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    os.environ['SDL_AUDIODRIVER'] = 'dsp'
+
+    program = Program()
+    # program.set_correct()
+    program.load("./autograde/envs/bounce_programs/mixed_theme_train.json")
+
+    # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+    # TODO: if wrap monitor, we can get episodic reward
+
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True  # pylint: disable=E1101
+
+    with tf.Session(config=config):
+        checkpoint_callback = CheckpointCallback(save_freq=250000,
+                                                 save_path="./saved_models/self_minus_finish_reward_mixed_theme/",
+                                                 name_prefix="ppo2_cnn_lstm_default")
+
+        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                               max_steps=1000, finish_reward=0)
+        # not n_step=256, because shorter helps us learn a better policy; 128 = 2 seconds out
+        # model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.99,
+        #              verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_reward_mixed_theme_log/")
+
+        model = PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
+        model.set_env(env)
+        model.tensorboard_log = "./tensorboard_self_minus_finish_reward_mixed_theme_log/"
+        model.verbose = 1
+        model.nminibatches = 4
+        model.learning_rate = 5e-4
+
+        # Eval first to make sure we can eval this...(otherwise there's no point in training...)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                                      max_steps=1000, finish_reward=0)
+        mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
+
+        print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
+
+        # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
+        model.learn(total_timesteps=5000000 * 3, callback=CallbackList([checkpoint_callback]),
+                    tb_log_name='PPO2')  # 10M
 
         model.save("./saved_models/self_minus_finish_reward_mixed_theme")
 
@@ -251,235 +311,7 @@ def test_observations():
     env.close()
 
 
-def evaluate():
-    # evaluate on the same environment
-    model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
-
-    program = Program()
-    program.set_correct()
-
-    n_training_envs = 8  # originally training environments
-    env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1, max_steps=1000,
-                           finish_reward=0)
-
-    obs = env.reset()
-    done, state = False, None
-    episode_reward = 0.0
-    episode_length = 0
-
-    zero_completed_obs = np.zeros((n_training_envs,) + env.observation_space.shape)
-    while not done:
-        # concatenate obs
-        # https://github.com/hill-a/stable-baselines/issues/166
-        zero_completed_obs[0, :] = obs
-
-        action, state = model.predict(zero_completed_obs, state=state, deterministic=True)
-        obs, reward, done, _info = env.step([action[0]])
-        episode_reward += reward
-
-        episode_length += 1
-        env.render()
-
-
-def evaluate_five_ball_with_render():
-    # evaluate on a five-ball environment
-    model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
-
-    program = Program()
-    program.set_correct()
-
-    n_training_envs = 8  # originally training environments
-    env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=5, max_steps=3000,
-                           finish_reward=100)
-
-    obs = env.reset()
-    done, state = False, None
-    episode_reward = 0.0
-    episode_length = 0
-
-    zero_completed_obs = np.zeros((n_training_envs,) + env.observation_space.shape)
-
-    while not done:
-        # concatenate obs
-        # https://github.com/hill-a/stable-baselines/issues/166
-        zero_completed_obs[0, :] = obs
-
-        action, state = model.predict(zero_completed_obs, state=state, deterministic=True)
-        obs, reward, done, _info = env.step([action[0]])
-        episode_reward += reward
-
-        episode_length += 1
-        env.render()
-
-    print("total reward: {}".format(episode_reward))
-    print("episode length: {}".format(episode_length))
-
-
-def record_five_ball_video(setting='hardcourt'):
-    from stable_baselines.common.vec_env import VecVideoRecorder
-    model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
-
-    program = Program()
-    if setting == 'hardcourt':
-        program.set_correct()
-    elif setting == 'retro':
-        program.set_correct_with_theme()
-
-    n_training_envs = 8  # originally training environments
-    env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=5, max_steps=3000,
-                           finish_reward=100)
-
-    env = VecVideoRecorder(env, "./rec_videos/",
-                           record_video_trigger=lambda x: x == 0, video_length=3000,
-                           name_prefix="ppo2-cnn-lstm-final-agent-{}".format(setting))
-
-    obs = env.reset()
-    done, state = False, None
-    episode_reward = 0.0
-    episode_length = 0
-
-    zero_completed_obs = np.zeros((n_training_envs,) + env.observation_space.shape)
-
-    while not done:
-        # concatenate obs
-        # https://github.com/hill-a/stable-baselines/issues/166
-        zero_completed_obs[0, :] = obs
-
-        action, state = model.predict(zero_completed_obs, state=state, deterministic=True)
-        obs, reward, done, _info = env.step([action[0]])
-        episode_reward += reward
-
-        episode_length += 1
-        env.render()
-
-    print("total reward: {}".format(episode_reward))
-    print("episode length: {}".format(episode_length))
-
-
-def evaluate_five_ball():
-    # evaluate on a five-ball environment
-    # model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_2000000_steps.zip")
-    model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
-
-    program = Program()
-    program.set_correct()
-
-    n_training_envs = 8  # originally training environments
-    n_eval_episodes = 50
-    env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=5, max_steps=3000,
-                           finish_reward=100)
-
-    episode_rewards, episode_lengths = [], []
-    for _ in range(n_eval_episodes):
-        obs = env.reset()
-        done, state = False, None
-        episode_reward = 0.0
-        episode_length = 0
-
-        zero_completed_obs = np.zeros((n_training_envs,) + env.observation_space.shape)
-        while not done:
-            # concatenate obs
-            # https://github.com/hill-a/stable-baselines/issues/166
-            zero_completed_obs[0, :] = obs
-
-            action, state = model.predict(zero_completed_obs, state=state, deterministic=True)
-            obs, reward, done, _info = env.step([action[0]])
-            episode_reward += reward
-            episode_length += 1
-        episode_rewards.append(episode_reward)
-        episode_lengths.append(episode_length)
-
-    mean_reward = np.mean(episode_rewards)
-    std_reward = np.std(episode_rewards)
-
-    print("Average episode length: {}".format(np.mean(episode_lengths)))
-    print("Mean reward: {}, std: {}".format(mean_reward, std_reward))
-
-
-def evaluate_retro():
-    # evaluate on the same environment
-    model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
-
-    program = Program()
-    program.set_correct_with_theme()
-
-    n_training_envs = 8  # originally training environments
-    env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=5, max_steps=3000,
-                           finish_reward=0)
-
-    obs = env.reset()
-    done, state = False, None
-    episode_reward = 0.0
-    episode_length = 0
-
-    zero_completed_obs = np.zeros((n_training_envs,) + env.observation_space.shape)
-    while not done:
-        # concatenate obs
-        # https://github.com/hill-a/stable-baselines/issues/166
-        zero_completed_obs[0, :] = obs
-
-        action, state = model.predict(zero_completed_obs, state=state, deterministic=True)
-        obs, reward, done, _info = env.step([action[0]])
-        episode_reward += reward
-
-        episode_length += 1
-        env.render()
-
-
-def evaluate_retro_five_ball():
-    # evaluate on a five-ball environment
-    # model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_2000000_steps.zip")
-    model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
-
-    program = Program()
-    program.set_correct_with_theme()
-
-    n_training_envs = 8  # originally training environments
-    n_eval_episodes = 50
-    env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=5, max_steps=3000,
-                           finish_reward=100)
-
-    episode_rewards, episode_lengths = [], []
-    for _ in range(n_eval_episodes):
-        obs = env.reset()
-        done, state = False, None
-        episode_reward = 0.0
-        episode_length = 0
-
-        zero_completed_obs = np.zeros((n_training_envs,) + env.observation_space.shape)
-        while not done:
-            # concatenate obs
-            # https://github.com/hill-a/stable-baselines/issues/166
-            zero_completed_obs[0, :] = obs
-
-            action, state = model.predict(zero_completed_obs, state=state, deterministic=True)
-            obs, reward, done, _info = env.step([action[0]])
-            episode_reward += reward
-            episode_length += 1
-        episode_rewards.append(episode_reward)
-        episode_lengths.append(episode_length)
-
-    mean_reward = np.mean(episode_rewards)
-    std_reward = np.std(episode_rewards)
-
-    print("Average episode length: {}".format(np.mean(episode_lengths)))
-    print("Mean reward: {}, std: {}".format(mean_reward, std_reward))
-
-
 if __name__ == '__main__':
     pass
-    train_random_mixed_theme()
+    # train_random_mixed_theme()
     # train()
-
-    # evaluate()
-    # evaluate_five_ball()
-
-    # evaluate_retro()
-    # evaluate_retro_five_ball()
-
-    # record video
-    # record_five_ball_video()
-    # record_five_ball_video("retro")
-
-    # test_observations()
-

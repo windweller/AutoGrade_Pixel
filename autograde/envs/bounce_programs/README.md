@@ -2,6 +2,7 @@ Most of the JSON files are for testing purposes (validating the implementation o
 
 In the `./broken_small`, we collect 10 broken environments, 5 used as training, 5 used as testing. 
 Programs are disjoint -- meaning the testing environments are completely foreign to the video classifier.
+But they share the same theme.
 
 Realistic setting: 
 Teacher's reference/correct implementation; Provide 5 possible broken implementations.
