@@ -335,7 +335,7 @@ class BouncePixelEnv(gym.Env):
             reward = (score_diff - oppo_score_diff) * 20
             reward = max(-10, reward)
             # -10 vs. 20, we care more about goal than to catch the ball
-            assert reward in {20, -10, 0}  # highest reward is 100
+            # assert reward in {20, -10, 0}  # highest reward is 100
         else:
             reward = score_diff * 20  # we only care about sending the ball in; each ball in is 1 point
             # full points: 100

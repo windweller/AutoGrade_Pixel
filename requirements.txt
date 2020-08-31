@@ -9,3 +9,6 @@ opencv-python
 matplotlib
 wandb
 cloudpickle==1.5.0
+torchvision==0.4.2
+sklearn
+git+git://github.com/1nadequacy/dmc2gym.git

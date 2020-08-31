@@ -5,6 +5,8 @@
 
 *.zip
 *.meta.json
+*.json
+*.txt
 
 # Created by .ignore support plugin (hsz.mobi)
 ### JetBrains template

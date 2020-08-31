@@ -163,7 +163,21 @@ class Config(object):
 
     def loads(self, json_obj):
         if type(json_obj) == str:
-            json_obj = json.loads(json_obj)
+            result = None
+            try:
+                result = json.loads(json_obj)
+            except:
+                pass
+
+            try:
+                # we assume this is
+                result = json.load(open(json_obj))
+            except:
+                pass
+
+            assert result is not None, "We are not able to parse the obj you sent in"
+            json_obj = result
+
         assert type(json_obj) == dict
         self.config_dict = json_obj
         self.update()
@@ -1227,7 +1241,8 @@ if __name__ == '__main__':
     # program.load("./bounce_programs/demo1.json")
     # program.load("./bounce_programs/easier_demo2.json")
     # program.load("./bounce_programs/speed_test.json")
-    program.load("./bounce_programs/mixed_theme_train.json")
+    # program.load("./bounce_programs/mixed_theme_train.json")
+    program.load("./bounce_programs/empty.json")
     app = Bounce(program)
     # app.seed(2222)
     # app.ball_group.get_new_ball_init()
