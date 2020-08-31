@@ -94,9 +94,11 @@ def main():
 
     log_comm = comm.Split(1 if is_test_worker else 0, 0)
     format_strs = ['csv', 'stdout'] if log_comm.Get_rank() == 0 else []
-    LOG_DIR += args.env_name + '/nlev_' +  str(args.num_levels) + '_mode_'
-    LOG_DIR += args.distribution_mode +'/' + args.data_aug + '/' + args.exp_name
-    
+    # LOG_DIR += args.env_name + '/nlev_' +  str(args.num_levels) + '_mode_'
+    # LOG_DIR += args.distribution_mode +'/' + args.data_aug + '/' + args.exp_name
+
+    LOG_DIR += args.env_name + '/' + args.exp_name
+
     logger.configure(dir=LOG_DIR, format_strs=format_strs)
 
     logger.info("creating environment")
