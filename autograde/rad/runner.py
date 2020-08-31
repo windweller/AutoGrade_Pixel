@@ -38,8 +38,10 @@ class Runner(AbstractEnvRunner):
                 }
             self.augs_funcs = aug_to_func[data_aug](batch_size=nenvs, p_gray=0.8)
             self.obs = self.augs_funcs.do_augmentation(self.obs)
-            
-        if self.data_aug is not 'crop' and self.eval_flag:
+
+        # TODO: WHY!?
+        # if self.data_aug is not 'crop' and self.eval_flag:
+        if self.data_aug is 'crop' and self.eval_flag:
             self.augs_funcs = rad.Center_Crop()
             self.obs = self.augs_funcs.do_augmentation(self.obs)
             
@@ -70,8 +72,11 @@ class Runner(AbstractEnvRunner):
                 if maybeepinfo: epinfos.append(maybeepinfo)
             mb_rewards.append(rewards)
             if self.data_aug is not 'normal' and self.eval_flag is False:
+                # This is the "training" condition
                 self.obs[:] = self.augs_funcs.do_augmentation(obs)
-            elif self.data_aug is not 'crop' and self.eval_flag:
+            # elif self.data_aug is not 'crop' and self.eval_flag:
+            elif self.data_aug is 'crop' and self.eval_flag:
+                # I have no idea what this is
                 self.obs[:] = self.augs_funcs.do_augmentation(obs)
             else:
                 self.obs[:] = obs
