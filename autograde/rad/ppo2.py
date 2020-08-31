@@ -9,6 +9,9 @@ from collections import deque
 from baselines.common import explained_variance, set_global_seeds
 from policies import build_policy
 
+import wandb
+wandb.init(project="autograde-bounce")
+
 try:
     from mpi4py import MPI
 except ImportError:
@@ -214,16 +217,31 @@ def learn(*, network, env, total_timesteps, eval_env = None,
             logger.logkv("misc/total_timesteps", update*nbatch)
             logger.logkv("fps", fps)
             logger.logkv("misc/explained_variance", float(ev))
-            logger.logkv('eprewmean', safemean([epinfo['r'] for epinfo in epinfobuf]))
-            logger.logkv('eplenmean', safemean([epinfo['l'] for epinfo in epinfobuf]))
+            ep_rew_mean = safemean([epinfo['r'] for epinfo in epinfobuf])
+            logger.logkv('eprewmean', ep_rew_mean)
+            ep_len_mean =  safemean([epinfo['l'] for epinfo in epinfobuf])
+            logger.logkv('eplenmean', ep_len_mean)
+
+            wand_stats = {"fps": fps, 'misc/explained_variance': float(ev), "eprewmean": ep_rew_mean,
+             "eval_eplenmean": ep_len_mean}
+
             if eval_env is not None:
-                logger.logkv('eval_eprewmean', safemean([epinfo['r'] for epinfo in eval_epinfobuf]) )
-                logger.logkv('eval_eplenmean', safemean([epinfo['l'] for epinfo in eval_epinfobuf]) )
+                eval_ep_rew_mean = safemean([epinfo['r'] for epinfo in eval_epinfobuf])
+                logger.logkv('eval_eprewmean',  eval_ep_rew_mean)
+                eval_ep_len_mean = safemean([epinfo['l'] for epinfo in eval_epinfobuf])
+                logger.logkv('eval_eplenmean',  eval_ep_len_mean)
+                wand_stats['eval_eprewmean'] = eval_ep_rew_mean
+                wand_stats['eval_eplenmean'] = eval_ep_len_mean
+
             logger.logkv('misc/time_elapsed', tnow - tfirststart)
             for (lossval, lossname) in zip(lossvals, model.loss_names):
                 logger.logkv('loss/' + lossname, lossval)
+                wand_stats['loss/' + lossname] = lossval
 
+            # use wandb for internet access
+            wandb.log(wand_stats)
             logger.dumpkvs()
+
         if save_interval and (update % save_interval == 0 or update == 1) and logger.get_dir() and is_mpi_root:
             checkdir = osp.join(logger.get_dir(), 'checkpoints')
             os.makedirs(checkdir, exist_ok=True)
