@@ -141,7 +141,7 @@ def main():
     ppo2.learn(
         env=venv,
         eval_env=eval_venv,
-        network=cnn_lstm,  # conv_fn
+        network='cnn_lstm',  # conv_fn
         total_timesteps=timesteps_per_proc,
         save_interval=50_000,  # 62,
         nsteps=nsteps,
