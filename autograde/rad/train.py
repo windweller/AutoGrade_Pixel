@@ -58,7 +58,6 @@ def main():
     gamma = .99
     lam = .95
     nsteps = 256
-    nminibatches = 4 # 8
     ppo_epochs = 3
     clip_range = .2
     timesteps_per_proc = 20_000_000 # 200_000_000: hard 25_000_000: easy
@@ -76,6 +75,7 @@ def main():
     args = parser.parse_args()
 
     num_envs = args.num_envs
+    nminibatches = 4 if num_envs == 8 else 1
 
     program = Program()
     program.set_correct()
