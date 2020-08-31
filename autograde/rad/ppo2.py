@@ -223,7 +223,7 @@ def learn(*, network, env, total_timesteps, eval_env = None,
             logger.logkv('eplenmean', ep_len_mean)
 
             wand_stats = {"fps": fps, 'misc/explained_variance': float(ev), "eprewmean": ep_rew_mean,
-             "eval_eplenmean": ep_len_mean}
+             "eplenmean": ep_len_mean, 'misc/total_timesteps': update*nbatch, 'misc/nupdates': update}
 
             if eval_env is not None:
                 eval_ep_rew_mean = safemean([epinfo['r'] for epinfo in eval_epinfobuf])
