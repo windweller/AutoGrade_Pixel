@@ -52,7 +52,7 @@ def make_general_env(program, frame_stack, num_envs, reward_type, reward_shaping
     return env
 
 def main():
-    num_envs = 8
+
     learning_rate = 5e-4
     ent_coef = .01
     gamma = .99
@@ -68,11 +68,14 @@ def main():
     parser = argparse.ArgumentParser(description='Process procgen training arguments.')
     parser.add_argument('--env_name', type=str, default='bounce')
     parser.add_argument('--test_worker_interval', type=int, default=0)
+    parser.add_argument('--num_envs', type=int, default=8)
     parser.add_argument('--data_aug', type=str, default='normal')
     parser.add_argument('--exp_name', type=str, default='try1')
     parser.add_argument('--log_filename', type=str, default='vec_monitor_log.csv')
 
     args = parser.parse_args()
+
+    num_envs = args.num_envs
 
     program = Program()
     program.set_correct()
