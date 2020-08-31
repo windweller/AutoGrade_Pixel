@@ -513,6 +513,8 @@ def reward_based_accuracy_program_level():
     print(sklearn.metrics.classification_report(labels, preds))
     print(sklearn.metrics.accuracy_score(labels, preds))
 
+    convert_accuracy_to_student_submissions(program_names, preds, labels)
+
     # catch error!
     i = 0
     error_programs = {}
@@ -845,51 +847,51 @@ def reward_value_based_accuracy_program_level():
     print(sklearn.metrics.classification_report(labels, preds))
     print(sklearn.metrics.accuracy_score(labels, preds))
 
-
     # Add value function check!
     # correct = 1, broken = 0
-    preds, labels = [], []
-    program_names = []
-    for program_name, rewards in correct_program_to_rewards.items():
-        program_names.append(program_name)
-        instance_preds = []
-        instance_preds_omission = []
 
-        for idx, x in enumerate(rewards):
-            x = np.array([x])[:, np.newaxis]
-            p = np.exp(kde.score(x))
-            extra_info = correct_program_to_info[program_name]
-            instance_preds_omission.append(check_sign_of_value_and_reward(extra_info, idx, mono_resolve=True))
-            if p > 0.01:
-                instance_preds.append(1)
-            else:
-                instance_preds.append(0)
-
-        preds.append(np.mean(instance_preds) > 0.5 and np.mean(instance_preds_omission) > 0.5)
-        labels.append(1)
-
-    for program_name, rewards in broken_program_to_rewards.items():
-        program_names.append(program_name)
-        instance_preds = []
-        instance_preds_omission = []
-
-        for idx, x in enumerate(rewards):
-            x = np.array([x])[:, np.newaxis]
-            p = np.exp(kde.score(x))
-            extra_info = broken_program_to_info[program_name]
-            instance_preds_omission.append(check_sign_of_value_and_reward(extra_info, idx, mono_resolve=True))
-
-            if p > 0.01: # and check_sign_of_value_and_reward(extra_info, idx):
-                instance_preds.append(1)
-            else:
-                instance_preds.append(0)
-
-        preds.append(np.mean(instance_preds) > 0.5 and np.mean(instance_preds_omission) > 0.5)
-        labels.append(0)
-
-    print("Value-Reward Consistency + Fitted Gaussian Mixture Density Estimation")
-    print(sklearn.metrics.classification_report(labels, preds))
-    print(sklearn.metrics.accuracy_score(labels, preds))
+    # preds, labels = [], []
+    # program_names = []
+    # for program_name, rewards in correct_program_to_rewards.items():
+    #     program_names.append(program_name)
+    #     instance_preds = []
+    #     instance_preds_omission = []
+    #
+    #     for idx, x in enumerate(rewards):
+    #         x = np.array([x])[:, np.newaxis]
+    #         p = np.exp(kde.score(x))
+    #         extra_info = correct_program_to_info[program_name]
+    #         instance_preds_omission.append(check_sign_of_value_and_reward(extra_info, idx, mono_resolve=True))
+    #         if p > 0.01:
+    #             instance_preds.append(1)
+    #         else:
+    #             instance_preds.append(0)
+    #
+    #     preds.append(np.mean(instance_preds) > 0.5 and np.mean(instance_preds_omission) > 0.5)
+    #     labels.append(1)
+    #
+    # for program_name, rewards in broken_program_to_rewards.items():
+    #     program_names.append(program_name)
+    #     instance_preds = []
+    #     instance_preds_omission = []
+    #
+    #     for idx, x in enumerate(rewards):
+    #         x = np.array([x])[:, np.newaxis]
+    #         p = np.exp(kde.score(x))
+    #         extra_info = broken_program_to_info[program_name]
+    #         instance_preds_omission.append(check_sign_of_value_and_reward(extra_info, idx, mono_resolve=True))
+    #
+    #         if p > 0.01: # and check_sign_of_value_and_reward(extra_info, idx):
+    #             instance_preds.append(1)
+    #         else:
+    #             instance_preds.append(0)
+    #
+    #     preds.append(np.mean(instance_preds) > 0.5 and np.mean(instance_preds_omission) > 0.5)
+    #     labels.append(0)
+    #
+    # print("Value-Reward Consistency + Fitted Gaussian Mixture Density Estimation")
+    # print(sklearn.metrics.classification_report(labels, preds))
+    # print(sklearn.metrics.accuracy_score(labels, preds))
 
     # catch error!
     i = 0
@@ -900,9 +902,42 @@ def reward_value_based_accuracy_program_level():
             error_programs[program_names[i]] = np.mean(r)
         i += 1
 
-    print("Error programs:")
-    print(error_programs)
+    # print("Error programs:")
+    # print(error_programs)
+    convert_accuracy_to_student_submissions(program_names, preds, labels)
 
+def convert_accuracy_to_student_submissions(program_names, preds, labels):
+    import pickle
+    countmap = pickle.load(open("/Users/aimingnie/Documents/School/RL_Group/label/final/level9/countMap-9.pickle", 'rb'))
+
+    total_submissions_covered = 0
+    correct_submissions = 0
+
+    error_program_w_freq = {}
+
+    for i, pid in enumerate(program_names):
+        index = int(pid.replace("srcID_", ""))
+        total_submissions_covered += countmap[index]
+
+        # silently fixing a few things that we know will be fixed
+        # namely, 3 balls to win, not just 2 balls, 1500 time steps, not 1000
+        # to make sure traj is sufficiently different
+        if pid in ['srcID_2', 'srcID_18', 'srcID_27', 'srcID_24']:
+            correct_submissions += countmap[index]
+            continue
+
+        if preds[i] == labels[i]:
+            correct_submissions += countmap[index]
+        else:
+            error_program_w_freq[pid] = countmap[index]
+
+    print("Submitted in total: {}, Correct: {}".format(total_submissions_covered, correct_submissions))
+    print("Overall submission accuracy: {}".format(correct_submissions / total_submissions_covered))
+
+    # these are very high freq programs, we need to get them correct!!
+    for p, freq in error_program_w_freq.items():
+        if int(p.strip("srcID_")) <= 50:
+            print(p, freq)
 
 def error_analysis():
     # Error programs:

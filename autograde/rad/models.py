@@ -3,6 +3,7 @@ import tensorflow as tf
 from baselines.a2c import utils
 from baselines.a2c.utils import conv, fc, conv_to_fc, batch_to_seq, seq_to_batch
 from baselines.common.mpi_running_mean_std import RunningMeanStd
+from baselines.common.models import build_impala_cnn
 
 mapping = {}
 

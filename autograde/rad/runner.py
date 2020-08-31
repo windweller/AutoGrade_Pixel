@@ -1,6 +1,6 @@
 import numpy as np
 import imageio
-import train_procgen.data_augs as rad
+import data_augs as rad
 import time
 
 from baselines.common.runners import AbstractEnvRunner
