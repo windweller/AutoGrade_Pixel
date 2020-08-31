@@ -91,7 +91,6 @@ def main():
         is_test_worker = comm.Get_rank() % test_worker_interval == (test_worker_interval - 1)
 
     mpi_rank_weight = 0 if is_test_worker else 1
-    num_levels = 0 if is_test_worker else args.num_levels
 
     log_comm = comm.Split(1 if is_test_worker else 0, 0)
     format_strs = ['csv', 'stdout'] if log_comm.Get_rank() == 0 else []

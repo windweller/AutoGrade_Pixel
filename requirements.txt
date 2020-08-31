@@ -11,4 +11,7 @@ wandb
 cloudpickle==1.5.0
 torchvision==0.4.2
 sklearn
-git+git://github.com/1nadequacy/dmc2gym.git
+https://github.com/openai/baselines/archive/9ee399f5b20cd70ac0a871927a6cf043b478193f.zip
+scikit-image
+torch
+mpi4py
