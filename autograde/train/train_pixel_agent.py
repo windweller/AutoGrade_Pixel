@@ -12,7 +12,6 @@ from gym.wrappers import TimeLimit
 
 from stable_baselines.common.callbacks import CallbackList, EvalCallback, CheckpointCallback, \
     StopTrainingOnRewardThreshold
-from stable_baselines.common.policies import CnnLstmPolicy
 
 from autograde.rl_envs.bounce_env import BouncePixelEnv, Program, ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO
 from autograde.rl_envs.wrappers import ResizeFrame
@@ -117,14 +116,35 @@ def evaluate_ppo_policy(model, env, n_training_envs, n_eval_episodes=10, determi
     return mean_reward, std_reward
 
 
+# _policy_registry = {
+#     ActorCriticPolicy: {
+#         "CnnPolicy": CnnPolicy,
+#         "CnnLstmPolicy": CnnLstmPolicy,
+#         "CnnLnLstmPolicy": CnnLnLstmPolicy,
+#         "MlpPolicy": MlpPolicy,
+#         "MlpLstmPolicy": MlpLstmPolicy,
+#         "MlpLnLstmPolicy": MlpLnLstmPolicy,
+#     }
+# }
+
 def train():
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
     os.environ['SDL_AUDIODRIVER'] = 'dsp'
 
+    hyperparams = {
+        "finish_reward": 0,
+        "reward_shaping": False,
+        "n_steps": 256,
+        'learning_rate': 4e-4, # 5e-4,
+        'max_steps': 300,
+        'policy_type': 'CnnLnLstmPolicy' # 'CnnLstmPolicy'
+    }
+
     import wandb
     wandb.init(sync_tensorboard=True, project="autograde-bounce",
-               name="")
+               name="self_minus_oppo_no_finish_reward_retrain2",
+               config=hyperparams)
 
     program = Program()
     program.set_correct()
@@ -137,17 +157,18 @@ def train():
 
     with tf.Session(config=config):
         checkpoint_callback = CheckpointCallback(save_freq=250000,
-                                                 save_path="./saved_models/self_minus_oppo_no_finish_reward_retrain/",
-                                                 name_prefix="ppo2_cnn_lstm_retrain")
+                                                 save_path="./saved_models/self_minus_oppo_no_finish_reward_retrain2/",
+                                                 name_prefix="ppo2_cnn_lstm_retrain2")
 
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
-                               max_steps=1000, finish_reward=0)
-        model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.99,
-                     verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_oppo_no_finish_reward_retrain_log/")
+                               max_steps=hyperparams['max_steps'], finish_reward=0)
+        model = PPO2(hyperparams['policy_type'], env, n_steps=hyperparams['n_steps'],
+                     learning_rate=hyperparams['learning_rate'], gamma=0.99,
+                     verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_oppo_no_finish_reward_retrain2_log/")
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
-                                      max_steps=1000, finish_reward=0)
+                                      max_steps=hyperparams['max_steps'], finish_reward=0)
         mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
 
         print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
@@ -155,12 +176,12 @@ def train():
         # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
         model.learn(total_timesteps=3000000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
 
-        model.save("./saved_models/ppo2_cnn_lstm_self_minus_oppo_no_finish_reward_retrain")
+        model.save("./saved_models/ppo2_cnn_lstm_self_minus_oppo_no_finish_reward_retrain2")
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
-                                      max_steps=1000, finish_reward=0)
+                                      max_steps=hyperparams['max_steps'], finish_reward=0)
         # AssertionError: You must pass only one environment when using this function
         # But then, the NN is expecting shape of (8, ...)
         mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
