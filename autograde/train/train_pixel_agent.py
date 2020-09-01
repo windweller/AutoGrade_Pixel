@@ -34,8 +34,7 @@ def get_env_fn(program, reward_type, reward_shaping, num_ball_to_win, max_steps=
         # env = ScaledFloatFrame(env)
         env = ResizeFrame(env)
         # env = ScaledFloatFrame(env)
-        env = TimeLimit(env,
-                        max_episode_steps=max_steps)  # 20 seconds  # no skipping, it should be 3000. With skip, do 3000 / skip.
+        env = TimeLimit(env, max_episode_steps=max_steps)  # 20 seconds  # no skipping, it should be 3000. With skip, do 3000 / skip.
         return env
 
     return make_env
@@ -135,15 +134,15 @@ def train():
     hyperparams = {
         "finish_reward": 0,
         "reward_shaping": False,
-        "n_steps": 256,
-        'learning_rate': 4e-4, # 5e-4,
+        "n_steps": 128, # 256,
+        'learning_rate': 5e-4, # 5e-4,
         'max_steps': 300,
-        'policy_type': 'CnnLnLstmPolicy' # 'CnnLstmPolicy'
+        'policy_type': 'CnnLstmPolicy' # 'CnnLstmPolicy'
     }
 
     import wandb
     wandb.init(sync_tensorboard=True, project="autograde-bounce",
-               name="self_minus_oppo_no_finish_reward_retrain2",
+               name="self_minus_oppo_no_finish_reward_retrain3_n128",
                config=hyperparams)
 
     program = Program()
@@ -157,14 +156,14 @@ def train():
 
     with tf.Session(config=config):
         checkpoint_callback = CheckpointCallback(save_freq=250000,
-                                                 save_path="./saved_models/self_minus_oppo_no_finish_reward_retrain2/",
-                                                 name_prefix="ppo2_cnn_lstm_retrain2")
+                                                 save_path="./saved_models/self_minus_oppo_no_finish_reward_retrain3_n128/",
+                                                 name_prefix="ppo2_cnn_lstm_retrain3")
 
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
                                max_steps=hyperparams['max_steps'], finish_reward=0)
         model = PPO2(hyperparams['policy_type'], env, n_steps=hyperparams['n_steps'],
                      learning_rate=hyperparams['learning_rate'], gamma=0.99,
-                     verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_oppo_no_finish_reward_retrain2_log/")
+                     verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_oppo_no_finish_reward_retrain3_n128_log/")
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
@@ -176,7 +175,7 @@ def train():
         # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
         model.learn(total_timesteps=3000000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
 
-        model.save("./saved_models/ppo2_cnn_lstm_self_minus_oppo_no_finish_reward_retrain2")
+        model.save("./saved_models/ppo2_cnn_lstm_self_minus_oppo_no_finish_reward_retrain3_n128")
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
