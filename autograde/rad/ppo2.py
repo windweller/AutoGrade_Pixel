@@ -144,7 +144,7 @@ def learn(*, network, env, total_timesteps, eval_env = None,
     else:
         init_process = None
 
-    # 9765 batches
+    # 9765 updates
     nupdates = total_timesteps//nbatch
     for update in range(1, nupdates+1):
         assert nbatch % nminibatches == 0
