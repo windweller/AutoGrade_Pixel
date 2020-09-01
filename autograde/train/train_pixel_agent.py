@@ -318,4 +318,4 @@ def test_observations():
 if __name__ == '__main__':
     pass
     # train_random_mixed_theme()
-    # train()
+    train()
