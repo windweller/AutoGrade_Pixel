@@ -55,24 +55,28 @@ def main():
 
     learning_rate = 5e-4
     ent_coef = .01
-    gamma = .99
+    gamma = .999 # .99
     lam = .95
     nsteps = 256
-    ppo_epochs = 3
+    ppo_epochs = 4 # 3
     clip_range = .2
-    timesteps_per_proc = 20_000_000 # 200_000_000: hard 25_000_000: easy
-    use_vf_clipping = True
+    # timesteps_per_proc = 5_000_000 # 200_000_000: hard 25_000_000: easy
+    use_vf_clipping = False
     LOG_DIR = './log/'
 
     parser = argparse.ArgumentParser(description='Process procgen training arguments.')
     parser.add_argument('--env_name', type=str, default='bounce')
     parser.add_argument('--test_worker_interval', type=int, default=0)
     parser.add_argument('--num_envs', type=int, default=8)
+    parser.add_argument('--steps', type=int, default=5_000_000)
     parser.add_argument('--data_aug', type=str, default='normal')
     parser.add_argument('--exp_name', type=str, default='try1')
     parser.add_argument('--log_filename', type=str, default='vec_monitor_log.csv')
+    parser.add_argument('--reward_shaping', action='store_true', help="We enable a reward shaping to help paddle catch the ball")
 
     args = parser.parse_args()
+
+    timesteps_per_proc = args.steps
 
     num_envs = args.num_envs
     nminibatches = 4 if num_envs == 8 else 1
@@ -105,28 +109,27 @@ def main():
     logger.configure(dir=LOG_DIR, format_strs=format_strs)
 
     logger.info("creating environment")
-    venv = make_general_env(program, 1, num_envs, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
-                               max_steps=1000, finish_reward=0)
+    venv = make_general_env(program, 1, num_envs, SELF_MINUS_HALF_OPPO, reward_shaping=args.reward_shaping, num_ball_to_win=1,
+                               max_steps=1000, finish_reward=100)
     # venv = ProcgenEnv(num_envs=num_envs, env_name=args.env_name, num_levels=num_levels, start_level=args.start_level, distribution_mode=args.distribution_mode)
     # venv = VecExtractDictObs(venv, "rgb")
 
     venv = VecMonitor(
         venv=venv, filename=args.log_filename, keep_buf=100,
     )
-
-    # venv = VecNormalize(venv=venv, ob=False)
+    venv = VecNormalize(venv=venv, ob=False)
     
     # eval env, unlimited levels
     # eval_venv = ProcgenEnv(num_envs=num_envs, env_name=args.env_name, num_levels=0,
     #                        start_level=args.test_start_level, distribution_mode=args.distribution_mode)
     # eval_venv = VecExtractDictObs(eval_venv, "rgb")
 
-    eval_venv = make_general_env(program, 1, num_envs, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
-                               max_steps=1000, finish_reward=0)
+    eval_venv = make_general_env(program, 1, num_envs, SELF_MINUS_HALF_OPPO, reward_shaping=args.reward_shaping, num_ball_to_win=1,
+                               max_steps=1000, finish_reward=100)
     eval_venv = VecMonitor(
         venv=eval_venv, filename=None, keep_buf=100,
     )
-    # eval_venv = VecNormalize(venv=eval_venv, ob=False)
+    eval_venv = VecNormalize(venv=eval_venv, ob=False)
 
     logger.info("creating tf session")
     setup_mpi_gpus()
@@ -138,12 +141,12 @@ def main():
     # conv_fn = lambda x: build_impala_cnn(x, depths=[16,32,32], emb_size=256)
 
     logger.info("training")
-    ppo2.learn(
+    model = ppo2.learn(
         env=venv,
         eval_env=eval_venv,
         network='cnn_lstm',  # conv_fn
         total_timesteps=timesteps_per_proc,
-        save_interval=50_000,  # 62,
+        save_interval=500,  # 62,
         nsteps=nsteps,
         nminibatches=nminibatches,
         lam=lam,
@@ -161,7 +164,14 @@ def main():
         vf_coef=0.5,
         max_grad_norm=0.5,
         data_aug=args.data_aug,
+        exp_name=args.exp_name
     )
+
+    checkdir = os.path.join(logger.get_dir(), 'checkpoints')
+    os.makedirs(checkdir, exist_ok=True)
+    savepath = os.path.join(checkdir, 'final')
+    print('Saving to', savepath)
+    model.save(savepath)
 
 if __name__ == '__main__':
     main()

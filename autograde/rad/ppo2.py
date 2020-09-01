@@ -10,7 +10,6 @@ from baselines.common import explained_variance, set_global_seeds
 from policies import build_policy
 
 import wandb
-wandb.init(project="autograde-bounce")
 
 try:
     from mpi4py import MPI
@@ -28,7 +27,7 @@ def learn(*, network, env, total_timesteps, eval_env = None,
           vf_coef=0.5,  max_grad_norm=0.5, gamma=0.99, lam=0.95,
           log_interval=10, nminibatches=4, noptepochs=4, cliprange=0.2,
           save_interval=0, load_path=None, model_fn=None, update_fn=None, 
-          init_fn=None, mpi_rank_weight=1, comm=None,
+          init_fn=None, mpi_rank_weight=1, comm=None, exp_name='',
           data_aug='normal', **network_kwargs):
     '''
     Learn policy using PPO algorithm (https://arxiv.org/abs/1707.06347)
@@ -81,6 +80,11 @@ def learn(*, network, env, total_timesteps, eval_env = None,
     **network_kwargs:                 keyword arguments to the policy / network builder. See baselines.common/policies.py/build_policy and arguments to a particular type of network
                                       For instance, 'mlp' network architecture has arguments num_hidden and num_layers.
     '''
+    if exp_name == '':
+        wandb.init(project="autograde-bounce")
+    else:
+        wandb.init(project="autograde-bounce", name=exp_name)
+
     set_global_seeds(seed)
     
     if isinstance(lr, float): lr = constfn(lr)
@@ -139,7 +143,8 @@ def learn(*, network, env, total_timesteps, eval_env = None,
         init_process = tf.variables_initializer(rand_processes)
     else:
         init_process = None
-    
+
+    # 9765 batches
     nupdates = total_timesteps//nbatch
     for update in range(1, nupdates+1):
         assert nbatch % nminibatches == 0
@@ -222,7 +227,7 @@ def learn(*, network, env, total_timesteps, eval_env = None,
             ep_len_mean =  safemean([epinfo['l'] for epinfo in epinfobuf])
             logger.logkv('eplenmean', ep_len_mean)
 
-            wand_stats = {"fps": fps, 'misc/explained_variance': float(ev), "eprewmean": ep_rew_mean,
+            wand_stats = {"misc/fps": fps, 'misc/explained_variance': float(ev), "eprewmean": ep_rew_mean,
              "eplenmean": ep_len_mean, 'misc/total_timesteps': update*nbatch, 'misc/nupdates': update}
 
             if eval_env is not None:

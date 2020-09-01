@@ -291,6 +291,8 @@ class BouncePixelEnv(gym.Env):
         self.num_ball_to_win = num_ball_to_win
         self.finish_reward = finish_reward
 
+        self.prev_shaping = None
+
         self.program = program
 
         self.bounce = Bounce(program)
@@ -349,7 +351,17 @@ class BouncePixelEnv(gym.Env):
 
         # reward shaping
         if self.reward_shaping:
-            raise NotImplementedError
+
+            # only tracking one ball's distance
+            ball_x, ball_y = self.bounce.ball_group.balls[0].body.position
+            paddle_x, paddle_y = self.bounce.paddle.body.position
+
+            shaping = - np.abs(ball_x - paddle_x) / 400 * 10
+
+            if self.prev_shaping is not None:
+                reward += shaping - self.prev_shaping
+
+            self.prev_shaping = shaping
 
         # make reward a bit smaller...
         # reward /= 10
@@ -363,6 +375,7 @@ class BouncePixelEnv(gym.Env):
 
         # seeding needs to happen after the reset
         self.bounce = Bounce(self.program)
+        self.prev_shaping = None
 
         return self.get_image()
 
@@ -575,6 +588,49 @@ def replay_human_play_with_sticky_actions(program_name, human_play_npz, seed, ma
 
     env.close()
 
+def try_reward_shaping():
+    import random
+    from autograde.rl_envs.utils import SmartImageViewer
+
+    max_len = 30
+
+    program = Program()
+    program.set_correct()
+    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, False, num_ball_to_win=1, finish_reward=0)
+
+    obs = env.reset()
+    viewer = SmartImageViewer()
+
+    prev_shaping = None
+    reward = 0
+
+    for i in range(max_len):
+        # action = np.random.randint(env.action_space.n, size=1)
+        action = random.choice([0, 1, 2])
+        obs, reward, dones, info = env.step(action)
+        # env.render()
+        # obs = obs.squeeze(0)
+        viewer.imshow(obs)
+
+        ball_x, ball_y = env.bounce.ball_group.balls[0].body.position
+        paddle_x, paddle_y = env.bounce.paddle.body.position
+
+        # print(ball_x, ball_y, 'paddle', paddle_x, paddle_y)
+        shaping = - np.abs(ball_x - paddle_x) / 400 * 10
+
+        if prev_shaping is not None:
+            reward += shaping - prev_shaping
+
+        prev_shaping = shaping
+
+        print(reward)
+
+        if dones:
+            break
+        env.bounce.clock.tick(fps)
+
+    env.close()
+
 
 if __name__ == '__main__':
     pass
@@ -597,11 +653,13 @@ if __name__ == '__main__':
 
     # verify_and_convert_human_play_to_max_skip("human_actions_2222_max_skip_2.npz", seed=2222, max_skip=2)
 
-    verify_and_convert_human_play_to_max_skip("human_actions_1414_max_skip_2_1_ball.npz", seed=1414, max_skip=2)
-    verify_and_convert_human_play_to_max_skip("human_actions_2121_max_skip_2_1_ball.npz", seed=2121, max_skip=2)
-    verify_and_convert_human_play_to_max_skip("human_actions_5555_max_skip_2_1_ball.npz", seed=5555, max_skip=2)
+    # verify_and_convert_human_play_to_max_skip("human_actions_1414_max_skip_2_1_ball.npz", seed=1414, max_skip=2)
+    # verify_and_convert_human_play_to_max_skip("human_actions_2121_max_skip_2_1_ball.npz", seed=2121, max_skip=2)
+    # verify_and_convert_human_play_to_max_skip("human_actions_5555_max_skip_2_1_ball.npz", seed=5555, max_skip=2)
 
     # so it should be 1500 time steps, not 3000...but check Monitor counts real frames or agent actions
 
     # replay_human_play_with_sticky_actions("correct_sample.json", "human_actions_2222_max_skip_2_converted.npz", seed=2222, max_skip=2)
 
+    # TODO: test out reward shaping, play it as human, record rewards
+    try_reward_shaping()
