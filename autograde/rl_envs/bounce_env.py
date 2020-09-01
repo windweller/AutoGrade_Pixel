@@ -356,7 +356,7 @@ class BouncePixelEnv(gym.Env):
             ball_x, ball_y = self.bounce.ball_group.balls[0].body.position
             paddle_x, paddle_y = self.bounce.paddle.body.position
 
-            shaping = - np.abs(ball_x - paddle_x) / 400 * 10
+            shaping = - 10 * np.abs(ball_x - paddle_x) / 400
 
             if self.prev_shaping is not None:
                 reward += shaping - self.prev_shaping

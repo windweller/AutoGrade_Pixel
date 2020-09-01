@@ -125,8 +125,9 @@ def main():
     #                        start_level=args.test_start_level, distribution_mode=args.distribution_mode)
     # eval_venv = VecExtractDictObs(eval_venv, "rgb")
 
-    eval_venv = make_general_env(program, 1, num_envs, SELF_MINUS_HALF_OPPO, reward_shaping=args.reward_shaping, num_ball_to_win=1,
-                               max_steps=1000, finish_reward=args.finish_reward)
+    # we don't need to evaluate on reward shaping
+    eval_venv = make_general_env(program, 1, num_envs, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                               max_steps=1000, finish_reward=0)
     eval_venv = VecMonitor(
         venv=eval_venv, filename=None, keep_buf=100,
     )
