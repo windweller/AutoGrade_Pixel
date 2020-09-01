@@ -71,11 +71,11 @@ class Runner(AbstractEnvRunner):
                 count+=1
                 if maybeepinfo: epinfos.append(maybeepinfo)
             mb_rewards.append(rewards)
-            if self.data_aug is not 'normal' and self.eval_flag is False:
+            if self.data_aug != 'normal' and self.eval_flag is False:
                 # This is the "training" condition
                 self.obs[:] = self.augs_funcs.do_augmentation(obs)
             # elif self.data_aug is not 'crop' and self.eval_flag:
-            elif self.data_aug is 'crop' and self.eval_flag:
+            elif self.data_aug == 'crop' and self.eval_flag:
                 # I have no idea what this is
                 self.obs[:] = self.augs_funcs.do_augmentation(obs)
             else:
