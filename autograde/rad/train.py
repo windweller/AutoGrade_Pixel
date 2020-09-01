@@ -69,6 +69,7 @@ def main():
     parser.add_argument('--test_worker_interval', type=int, default=0)
     parser.add_argument('--num_envs', type=int, default=8)
     parser.add_argument('--steps', type=int, default=5_000_000)
+    parser.add_argument('--finish_reward', type=int, default=0)
     parser.add_argument('--data_aug', type=str, default='normal')
     parser.add_argument('--exp_name', type=str, default='try1')
     parser.add_argument('--log_filename', type=str, default='vec_monitor_log.csv')
@@ -110,7 +111,7 @@ def main():
 
     logger.info("creating environment")
     venv = make_general_env(program, 1, num_envs, SELF_MINUS_HALF_OPPO, reward_shaping=args.reward_shaping, num_ball_to_win=1,
-                               max_steps=1000, finish_reward=100)
+                               max_steps=1000, finish_reward=args.finish_reward)
     # venv = ProcgenEnv(num_envs=num_envs, env_name=args.env_name, num_levels=num_levels, start_level=args.start_level, distribution_mode=args.distribution_mode)
     # venv = VecExtractDictObs(venv, "rgb")
 
@@ -125,7 +126,7 @@ def main():
     # eval_venv = VecExtractDictObs(eval_venv, "rgb")
 
     eval_venv = make_general_env(program, 1, num_envs, SELF_MINUS_HALF_OPPO, reward_shaping=args.reward_shaping, num_ball_to_win=1,
-                               max_steps=1000, finish_reward=100)
+                               max_steps=1000, finish_reward=args.finish_reward)
     eval_venv = VecMonitor(
         venv=eval_venv, filename=None, keep_buf=100,
     )
