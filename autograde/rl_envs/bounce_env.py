@@ -356,7 +356,7 @@ class BouncePixelEnv(gym.Env):
             ball_x, ball_y = self.bounce.ball_group.balls[0].body.position
             paddle_x, paddle_y = self.bounce.paddle.body.position
 
-            shaping = - 10 * np.abs(ball_x - paddle_x) / 400
+            shaping = - 100 * np.abs(ball_x - paddle_x) / 400
 
             if self.prev_shaping is not None:
                 reward += shaping - self.prev_shaping
@@ -553,7 +553,7 @@ def replay_human_play_with_sticky_actions(program_name, human_play_npz, seed, ma
 
     program = Program()
     program.load("../envs/bounce_programs/" + program_name)
-    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, False, num_ball_to_win=1, finish_reward=0)
+    env = BouncePixelEnv(program, SELF_MINUS_HALF_OPPO, True, num_ball_to_win=1, finish_reward=0)
 
     from autograde.rl_envs.utils import SmartImageViewer
 
@@ -568,6 +568,8 @@ def replay_human_play_with_sticky_actions(program_name, human_play_npz, seed, ma
     # print("assignment counter:", env.bounce.ball_group.assignment_counter)
     # print("Ball positions:", env.bounce.ball_group.ball_inits[:8])
 
+    reward = 0
+
     for i in range(max_len):
         # action = np.random.randint(env.action_space.n, size=1)
         action = human_actions[i]
@@ -576,8 +578,9 @@ def replay_human_play_with_sticky_actions(program_name, human_play_npz, seed, ma
             # env.render()
             # obs = obs.squeeze(0)
             viewer.imshow(obs)
-            if rewards != 0:
-                print(rewards)
+            reward += rewards
+            # if rewards != 0:
+            #     print(rewards)
 
             if dones:
                 break
@@ -586,13 +589,14 @@ def replay_human_play_with_sticky_actions(program_name, human_play_npz, seed, ma
             break
         env.bounce.clock.tick(fps)
 
+    print(reward)
     env.close()
 
 def try_reward_shaping():
     import random
     from autograde.rl_envs.utils import SmartImageViewer
 
-    max_len = 30
+    max_len = 200
 
     program = Program()
     program.set_correct()
@@ -602,7 +606,7 @@ def try_reward_shaping():
     viewer = SmartImageViewer()
 
     prev_shaping = None
-    reward = 0
+    rewards = 0
 
     for i in range(max_len):
         # action = np.random.randint(env.action_space.n, size=1)
@@ -616,20 +620,21 @@ def try_reward_shaping():
         paddle_x, paddle_y = env.bounce.paddle.body.position
 
         # print(ball_x, ball_y, 'paddle', paddle_x, paddle_y)
-        shaping = - np.abs(ball_x - paddle_x) / 400 * 10
+        shaping = - 100 * np.abs(ball_x - paddle_x) / 400
 
         if prev_shaping is not None:
             reward += shaping - prev_shaping
 
         prev_shaping = shaping
 
-        print(reward)
+        rewards += reward
 
         if dones:
             break
         env.bounce.clock.tick(fps)
 
     env.close()
+    print(i, rewards)
 
 
 if __name__ == '__main__':
@@ -659,7 +664,7 @@ if __name__ == '__main__':
 
     # so it should be 1500 time steps, not 3000...but check Monitor counts real frames or agent actions
 
-    # replay_human_play_with_sticky_actions("correct_sample.json", "human_actions_2222_max_skip_2_converted.npz", seed=2222, max_skip=2)
+    replay_human_play_with_sticky_actions("correct_sample.json", "human_actions_2222_max_skip_2_converted.npz", seed=2222, max_skip=2)
 
     # TODO: test out reward shaping, play it as human, record rewards
-    try_reward_shaping()
+    # try_reward_shaping()

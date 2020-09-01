@@ -132,17 +132,17 @@ def train():
     os.environ['SDL_AUDIODRIVER'] = 'dsp'
 
     hyperparams = {
-        "finish_reward": 0,
-        "reward_shaping": False,
-        "n_steps": 128, # 256,
+        "finish_reward": 80, # 0,
+        "reward_shaping": True, # False,
+        "n_steps": 256, # 256,
         'learning_rate': 5e-4, # 5e-4,
-        'max_steps': 300,
+        'max_steps': 1000,
         'policy_type': 'CnnLstmPolicy' # 'CnnLstmPolicy'
     }
 
     import wandb
     wandb.init(sync_tensorboard=True, project="autograde-bounce",
-               name="self_minus_oppo_no_finish_reward_retrain3_n128",
+               name="self_minus_oppo_no_finish_reward_shaping_retrain4_n256",
                config=hyperparams)
 
     program = Program()
@@ -156,17 +156,19 @@ def train():
 
     with tf.Session(config=config):
         checkpoint_callback = CheckpointCallback(save_freq=250000,
-                                                 save_path="./saved_models/self_minus_oppo_no_finish_reward_retrain3_n128/",
-                                                 name_prefix="ppo2_cnn_lstm_retrain3")
+                                                 save_path="./saved_models/self_minus_oppo_finish_reward_shaping_retrain4_n256/",
+                                                 name_prefix="ppo2_cnn_lstm_retrain4")
 
-        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=hyperparams['reward_shaping'],
+                               num_ball_to_win=1,
                                max_steps=hyperparams['max_steps'], finish_reward=0)
         model = PPO2(hyperparams['policy_type'], env, n_steps=hyperparams['n_steps'],
                      learning_rate=hyperparams['learning_rate'], gamma=0.99,
-                     verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_oppo_no_finish_reward_retrain3_n128_log/")
+                     verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_oppo_finish_reward_shaping_retrain4_n256_log/")
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
-        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO,
+                                      reward_shaping=hyperparams['reward_shaping'], num_ball_to_win=1,
                                       max_steps=hyperparams['max_steps'], finish_reward=0)
         mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
 
@@ -175,11 +177,12 @@ def train():
         # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
         model.learn(total_timesteps=3000000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
 
-        model.save("./saved_models/ppo2_cnn_lstm_self_minus_oppo_no_finish_reward_retrain3_n128")
+        model.save("./saved_models/ppo2_cnn_lstm_self_minus_oppo_finish_reward_shaping_retrain4_n256")
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
-        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO,
+                                      reward_shaping=hyperparams['reward_shaping'], num_ball_to_win=1,
                                       max_steps=hyperparams['max_steps'], finish_reward=0)
         # AssertionError: You must pass only one environment when using this function
         # But then, the NN is expecting shape of (8, ...)
