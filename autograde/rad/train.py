@@ -118,7 +118,7 @@ def main():
     venv = VecMonitor(
         venv=venv, filename=args.log_filename, keep_buf=100,
     )
-    venv = VecNormalize(venv=venv, ob=False)
+    # venv = VecNormalize(venv=venv, ob=False)
     
     # eval env, unlimited levels
     # eval_venv = ProcgenEnv(num_envs=num_envs, env_name=args.env_name, num_levels=0,
@@ -131,7 +131,7 @@ def main():
     eval_venv = VecMonitor(
         venv=eval_venv, filename=None, keep_buf=100,
     )
-    eval_venv = VecNormalize(venv=eval_venv, ob=False)
+    # eval_venv = VecNormalize(venv=eval_venv, ob=False)
 
     logger.info("creating tf session")
     setup_mpi_gpus()
