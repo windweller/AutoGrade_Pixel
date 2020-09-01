@@ -106,7 +106,7 @@ class Runner(AbstractEnvRunner):
         mb_returns = mb_advs + mb_values
         
         # reset random parameters    
-        if self.data_aug is not 'normal' and self.eval_flag is False:
+        if self.data_aug != 'normal' and self.eval_flag is False:
             self.augs_funcs.change_randomization_params_all()
             self.obs = self.augs_funcs.do_augmentation(obs)
         
