@@ -26,7 +26,7 @@ class Runner(AbstractEnvRunner):
         # set data augmentation
         nenvs = self.obs.shape[0]
         self.augs_funcs = None
-        if self.data_aug is not 'normal': # and self.eval_flag is False:
+        if self.data_aug != 'normal': # and self.eval_flag is False:
             aug_to_func = {    
                 'gray':rad.RandGray,
                 'cutout':rad.Cutout,
