@@ -249,12 +249,12 @@ def train_random_mixed_theme():
 
         env.close()
 
-def train_rad():
+def train_rad(data_aug_name):
     # instead of training w/ mixed theme, we train with RAD instead, and evaluate if it's any good
 
     import wandb
     wandb.init(sync_tensorboard=True, project="autograde-bounce",
-               name="self_minus_oppo_rad_cutout_color")
+               name="self_minus_oppo_rad_{}".format(data_aug_name))
 
     from rad_ppo2 import PPO2
     # The PPO was not modified, but Runner is.
@@ -273,8 +273,8 @@ def train_rad():
 
     with tf.Session(config=config):
         checkpoint_callback = CheckpointCallback(save_freq=250000,
-                                                 save_path="./saved_models/self_minus_oppo_rad_cutout_color/",
-                                                 name_prefix="ppo2_cnn_lstm_rad_cutout_color")
+                                                 save_path="./saved_models/self_minus_oppo_rad_{}/".format(data_aug_name),
+                                                 name_prefix="ppo2_cnn_lstm_rad_{}".format(data_aug_name))
 
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
                                max_steps=1000, finish_reward=0)
@@ -285,10 +285,10 @@ def train_rad():
 
         model = PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
         # PPO2 set data_aug
-        model.data_aug = 'cutout_color'
+        model.data_aug = data_aug_name # 'cutout_color'
         model.set_env(env)
 
-        model.tensorboard_log = "./tensorboard_self_minus_oppo_rad_cutout_color_log/"
+        model.tensorboard_log = "./tensorboard_self_minus_oppo_rad_{}_log/".format(data_aug_name)
         model.verbose = 1
         model.nminibatches = 4
         model.learning_rate = 5e-4
@@ -304,7 +304,7 @@ def train_rad():
         model.learn(total_timesteps=3000000, callback=CallbackList([checkpoint_callback]),
                     tb_log_name='PPO2')  # 10M
 
-        model.save("./saved_models/self_minus_oppo_rad_cutout_color")
+        model.save("./saved_models/self_minus_oppo_rad_{}".format(data_aug_name))
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
@@ -410,4 +410,6 @@ if __name__ == '__main__':
     pass
     # train_random_mixed_theme()
     # train()
-    train_rad()
+
+    # train_rad('cutout_color')
+    train_rad('color_jitter')
