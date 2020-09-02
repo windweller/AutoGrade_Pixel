@@ -142,7 +142,7 @@ def train():
 
     import wandb
     wandb.init(sync_tensorboard=True, project="autograde-bounce",
-               name="self_minus_oppo_no_finish_reward_shaping_retrain4_n256",
+               name="self_minus_oppo_finish_reward_shaping_retrain4_n256",
                config=hyperparams)
 
     program = Program()
@@ -249,6 +249,71 @@ def train_random_mixed_theme():
 
         env.close()
 
+def train_rad():
+    # instead of training w/ mixed theme, we train with RAD instead, and evaluate if it's any good
+
+    import wandb
+    wandb.init(sync_tensorboard=True, project="autograde-bounce",
+               name="self_minus_oppo_rad_cutout_color")
+
+    from rad_ppo2 import PPO2
+    # The PPO was not modified, but Runner is.
+
+    import os
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    os.environ['SDL_AUDIODRIVER'] = 'dsp'
+
+    program = Program()
+    program.set_correct()
+
+    # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True  # pylint: disable=E1101
+
+    with tf.Session(config=config):
+        checkpoint_callback = CheckpointCallback(save_freq=250000,
+                                                 save_path="./saved_models/self_minus_oppo_rad_cutout_color/",
+                                                 name_prefix="ppo2_cnn_lstm_rad_cutout_color")
+
+        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                               max_steps=1000, finish_reward=0)
+
+        # not n_step=256, because shorter helps us learn a better policy; 128 = 2 seconds out
+        # model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.99,
+        #              verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_reward_mixed_theme_log/")
+
+        model = PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
+        model.set_env(env)
+        model.tensorboard_log = "./tensorboard_self_minus_oppo_rad_cutout_color_log/"
+        model.verbose = 1
+        model.nminibatches = 4
+        model.learning_rate = 5e-4
+
+        # Eval first to make sure we can eval this...(otherwise there's no point in training...)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                                      max_steps=1000, finish_reward=0)
+        mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
+
+        print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
+
+        # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
+        model.learn(total_timesteps=3000000, callback=CallbackList([checkpoint_callback]),
+                    tb_log_name='PPO2')  # 10M
+
+        model.save("./saved_models/self_minus_oppo_rad_cutout_color")
+
+        # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
+        # recurrent policy, no stacking!
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                                      max_steps=1000, finish_reward=0)
+
+        # AssertionError: You must pass only one environment when using this function
+        # But then, the NN is expecting shape of (8, ...)
+        mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
+        print("final model mean reward {}, std reward {}".format(mean_reward, std_reward))
+
+        env.close()
 
 def train_random_ball_setting():
     import os
@@ -341,4 +406,5 @@ def test_observations():
 if __name__ == '__main__':
     pass
     # train_random_mixed_theme()
-    train()
+    # train()
+    train_rad()
