@@ -284,7 +284,10 @@ def train_rad():
         #              verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_reward_mixed_theme_log/")
 
         model = PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
+        # PPO2 set data_aug
+        model.data_aug = 'cutout_color'
         model.set_env(env)
+
         model.tensorboard_log = "./tensorboard_self_minus_oppo_rad_cutout_color_log/"
         model.verbose = 1
         model.nminibatches = 4
