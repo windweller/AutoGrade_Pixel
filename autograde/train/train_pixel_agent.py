@@ -272,7 +272,7 @@ def train_rad(data_aug_name):
     config.gpu_options.allow_growth = True  # pylint: disable=E1101
 
     with tf.Session(config=config):
-        checkpoint_callback = CheckpointCallback(save_freq=500,
+        checkpoint_callback = CheckpointCallback(save_freq=25000,  # 500 * 8 = 4000 | 400000 | 200000
                                                  save_path="./saved_models/self_minus_oppo_rad_{}/".format(data_aug_name),
                                                  name_prefix="ppo2_cnn_lstm_rad_{}".format(data_aug_name))
 
@@ -308,6 +308,7 @@ def train_rad(data_aug_name):
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
+        program.set_correct_with_theme()
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
                                       max_steps=1000, finish_reward=0)
 
