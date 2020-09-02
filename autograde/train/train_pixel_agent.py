@@ -412,5 +412,5 @@ if __name__ == '__main__':
     # train_random_mixed_theme()
     # train()
 
-    train_rad('cutout_color')
-    # train_rad('color_jitter')
+    # train_rad('cutout_color')
+    train_rad('color_jitter')
