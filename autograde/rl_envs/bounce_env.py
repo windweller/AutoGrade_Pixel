@@ -52,7 +52,7 @@ class BounceHumanPlayRecord(gym.Env, PyGamePixelEnv):
     def __init__(self, program: Program, recording_dir=None, num_ball_to_win=1):
 
         self.program = program
-        self.num_ball_to_win= num_ball_to_win
+        self.num_ball_to_win = num_ball_to_win
 
         self.recording_dir = recording_dir
         os.makedirs(recording_dir, exist_ok=True)
@@ -129,7 +129,8 @@ class BounceHumanPlayRecord(gym.Env, PyGamePixelEnv):
             print("Number of frames: {}".format(iters))
             if self.recording_dir is not None:
                 np.savez_compressed(
-                    open(pjoin(self.recording_dir, "human_actions_{}_max_skip_{}_1_ball.npz".format(seed, max_skip)), 'wb'),
+                    open(pjoin(self.recording_dir, "human_actions_{}_max_skip_{}_1_ball.npz".format(seed, max_skip)),
+                         'wb'),
                     frames=np.array(self.recorded_actions, dtype=np.int))
 
                 return pjoin(self.recording_dir, "human_actions_{}_max_skip_{}_1_ball.npz".format(seed, max_skip))
@@ -452,6 +453,21 @@ def record_human_play_to_video(program_name, video_name):
     convert_np_to_video(filename, "./bounce_gameplay_recordings/" + video_name)
 
 
+def record_human_play_custom_program_to_video(program_json_str, video_name):
+    assert ".mp4" in video_name
+
+    # remove these lines for a more flexible function
+    assert "/" not in video_name, "we prefix the directory, just enter the name of file"
+
+    program = Program()
+
+    program.loads(program_json_str)
+    app = BounceHumanPlayRecordVideo(program, "./bounce_gameplay_recordings/")
+    filename = app.run()
+
+    convert_np_to_video(filename, "./bounce_gameplay_recordings/" + video_name)
+
+
 def record_human_play_to_actions(program_name, seed, max_len=3000, max_skip=1):
     assert ".json" in program_name
     assert "/" not in program_name, "we prefix the directory, just enter the name of file"
@@ -544,7 +560,8 @@ def verify_and_convert_human_play_to_max_skip(human_play_npz, seed, max_len=3000
 
     assert len(converted_actions) == human_actions.shape[0] / 2
     np.savez_compressed(open(
-        pjoin("./bounce_humanplay_recordings/", "human_actions_{}_max_skip_{}_1_ball_converted.npz".format(seed, max_skip)),
+        pjoin("./bounce_humanplay_recordings/",
+              "human_actions_{}_max_skip_{}_1_ball_converted.npz".format(seed, max_skip)),
         'wb'), frames=np.array(converted_actions, dtype=np.int))
 
 
@@ -592,6 +609,7 @@ def replay_human_play_with_sticky_actions(program_name, human_play_npz, seed, ma
     print(reward)
     env.close()
 
+
 def try_reward_shaping():
     import random
     from autograde.rl_envs.utils import SmartImageViewer
@@ -637,7 +655,48 @@ def try_reward_shaping():
     print(i, rewards)
 
 
+def record_invariances():
+    from string import Template
+
+    random_program_str = Template("""
+        {"when run": ["launch new ball", "set scene '${scene}'", "set ball '${ball}'", "set paddle '${paddle}'"],
+          "when left arrow": ["move left"],
+          "when right arrow": ["move right"],
+          "when ball hits paddle": ["bounce ball"],
+          "when ball hits wall": ["bounce ball"],
+          "when ball in goal": ["score point", "launch new ball"],
+          "when ball misses paddle": ["score opponent point",
+                                      "launch new ball"]}
+        """)
+
+    record_human_play_custom_program_to_video(random_program_str.substitute(scene="retro", ball="retro", paddle="retro"),
+                                              "retro.mp4")
+
+    record_human_play_custom_program_to_video(random_program_str.substitute(scene="retro", ball="hardcourt", paddle="hardcourt"),
+                                              "retro_normal_normal.mp4")
+
+    record_human_play_custom_program_to_video(random_program_str.substitute(scene="hardcourt", ball="retro", paddle="retro"),
+                                              "normal_retro_retro.mp4")
+
+def record_action_invariance():
+    from string import Template
+
+    random_program_str = Template("""
+            {"when run": ["launch new ball"],
+              "when left arrow": ["move left"],
+              "when right arrow": ["move right"],
+              "when ball hits paddle": ["bounce ball"],
+              "when ball hits wall": ["bounce ball", "set scene '${scene}'", "set ball '${ball}'", "set paddle '${paddle}'"],
+              "when ball in goal": ["score point", "launch new ball"],
+              "when ball misses paddle": ["score opponent point",
+                                          "launch new ball"]}
+            """)
+
+    record_human_play_custom_program_to_video(random_program_str.substitute(scene="random", ball="random", paddle="random"),
+                                              "action_invariance.mp4")
+
 if __name__ == '__main__':
+
     pass
     # use this to play the game as a human
     # interactive_run()
@@ -664,7 +723,10 @@ if __name__ == '__main__':
 
     # so it should be 1500 time steps, not 3000...but check Monitor counts real frames or agent actions
 
-    replay_human_play_with_sticky_actions("correct_sample.json", "human_actions_2222_max_skip_2_converted.npz", seed=2222, max_skip=2)
+    # replay_human_play_with_sticky_actions("correct_sample.json", "human_actions_2222_max_skip_2_converted.npz",
+    #                                       seed=2222, max_skip=2)
 
-    # TODO: test out reward shaping, play it as human, record rewards
     # try_reward_shaping()
+
+    # record_invariances()
+    record_action_invariance()

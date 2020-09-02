@@ -208,7 +208,7 @@ class Program(Config):
         self.config_dict['when ball misses paddle'].append(SCORE_OPPO_POINT)
         self.config_dict['when ball misses paddle'].append(LAUNCH_NEW_BALL)
 
-    def set_correct_with_theme(self):
+    def set_correct_retro_theme(self):
         self.config_dict['when run'].append(LAUNCH_NEW_BALL)
         self.config_dict['when run'].append("set 'retro' scene")
         self.config_dict['when run'].append("set 'retro' ball")

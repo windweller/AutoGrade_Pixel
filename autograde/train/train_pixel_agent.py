@@ -308,7 +308,7 @@ def train_rad(data_aug_name):
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
-        program.set_correct_with_theme()
+        program.set_correct_retro_theme()
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
                                       max_steps=1000, finish_reward=0)
 
@@ -413,4 +413,12 @@ if __name__ == '__main__':
     # train()
 
     # train_rad('cutout_color')
-    train_rad('color_jitter')
+    # train_rad('color_jitter')
+
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_aug", type=str, help="")
+    args = parser.parse_args()
+
+    train_rad(args.data_aug)

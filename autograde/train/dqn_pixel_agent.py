@@ -131,7 +131,7 @@ def main():
     os.environ['SDL_AUDIODRIVER'] = 'dsp'
 
     program = Program()
-    program.set_correct_with_theme()
+    program.set_correct_retro_theme()
 
     # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
     env = make_general_env(program, 2, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1)
