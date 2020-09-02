@@ -272,7 +272,7 @@ def train_rad(data_aug_name):
     config.gpu_options.allow_growth = True  # pylint: disable=E1101
 
     with tf.Session(config=config):
-        checkpoint_callback = CheckpointCallback(save_freq=250000,
+        checkpoint_callback = CheckpointCallback(save_freq=500,
                                                  save_path="./saved_models/self_minus_oppo_rad_{}/".format(data_aug_name),
                                                  name_prefix="ppo2_cnn_lstm_rad_{}".format(data_aug_name))
 
