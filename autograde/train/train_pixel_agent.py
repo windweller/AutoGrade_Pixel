@@ -6,6 +6,7 @@ from stable_baselines.common.vec_env import VecFrameStack, DummyVecEnv
 from stable_baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from stable_baselines.common.atari_wrappers import ScaledFloatFrame, WarpFrame
 from stable_baselines.common.vec_env import VecEnv
+from stable_baselines.common.policies import LstmPolicy
 
 import numpy as np
 from gym.wrappers import TimeLimit
@@ -17,6 +18,83 @@ from autograde.rl_envs.bounce_env import BouncePixelEnv, Program, ONLY_SELF_SCOR
 from autograde.rl_envs.wrappers import ResizeFrame
 
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
+
+def build_random_impala_cnn(scaled_image, depths=[16,32,32], **conv_kwargs):
+    """
+    unscaled_images
+
+    Model used in the paper "IMPALA: Scalable Distributed Deep-RL with
+    Importance Weighted Actor-Learner Architectures" https://arxiv.org/abs/1802.01561
+    """
+
+    layer_num = 0
+    def get_layer_num_str():
+        nonlocal layer_num
+        num_str = str(layer_num)
+        layer_num += 1
+        return num_str
+
+    def conv_layer(out, depth):
+        return tf.layers.conv2d(out, depth, 3, padding='same', name='layer_' + get_layer_num_str())
+
+    def residual_block(inputs):
+        depth = inputs.get_shape()[-1].value
+
+        out = tf.nn.relu(inputs)
+
+        out = conv_layer(out, depth)
+        out = tf.nn.relu(out)
+        out = conv_layer(out, depth)
+        return out + inputs
+
+    def conv_sequence(inputs, depth):
+        out = conv_layer(inputs, depth)
+        out = tf.layers.max_pooling2d(out, pool_size=3, strides=2, padding='same')
+        out = residual_block(out)
+        out = residual_block(out)
+        return out
+
+    # out = tf.cast(unscaled_images, tf.float32) / 255.
+
+    # In RAD baselines, all images are unscaled, so they scale it
+    # However, in Stable baselines, all images are scaled? (at least that's for nature_cnn)
+
+    # but since this is random CNN...we are going to scale this!!
+
+    out = tf.cast(scaled_image, tf.float32) / 255.
+
+    out = tf.layers.conv2d(out, 3, 3,
+                           padding='same',
+                           kernel_initializer=tf.initializers.glorot_normal(),
+                           trainable=False,
+                           name='randcnn')
+    for depth in depths:
+        out = conv_sequence(out, depth)
+
+    out = tf.layers.flatten(out)
+    out = tf.nn.relu(out)
+    out = tf.layers.dense(out, 256, activation=tf.nn.relu, name='layer_' + get_layer_num_str())
+
+    return out
+
+class RandomCnnLstmPolicy(LstmPolicy):
+    """
+    Policy object that implements actor critic, using LSTMs with a CNN feature extraction
+
+    :param sess: (TensorFlow session) The current TensorFlow session
+    :param ob_space: (Gym Space) The observation space of the environment
+    :param ac_space: (Gym Space) The action space of the environment
+    :param n_env: (int) The number of environments to run
+    :param n_steps: (int) The number of steps to run for each environment
+    :param n_batch: (int) The number of batch to run (n_envs * n_steps)
+    :param n_lstm: (int) The number of LSTM cells (for recurrent policies)
+    :param reuse: (bool) If the policy is reusable or not
+    :param kwargs: (dict) Extra keyword arguments for the nature CNN feature extraction
+    """
+
+    def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm=256, reuse=False, **_kwargs):
+        super(RandomCnnLstmPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm, reuse,
+                                            layer_norm=False, feature_extraction="cnn", cnn_extractor=build_random_impala_cnn, **_kwargs)
 
 
 # A very good note indeed!
@@ -322,6 +400,75 @@ def train_rad(data_aug_name, reward_shaping=False):
 
         env.close()
 
+def train_randomnet():
+    # train randomnet with reward shaping
+    # train for 6M steps (3M + 3M)
+
+    import os
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    os.environ['SDL_AUDIODRIVER'] = 'dsp'
+
+    hyperparams = {
+        "finish_reward": 0,  # 0,
+        "reward_shaping": True,  # False,
+        "n_steps": 256,  # 256,
+        'learning_rate': 5e-4,  # 5e-4,
+        'max_steps': 1000,
+    }
+
+    import wandb
+    wandb.init(sync_tensorboard=True, project="autograde-bounce",
+               name="self_minus_oppo_reward_shaping_train_randomnet",
+               config=hyperparams)
+
+    program = Program()
+    program.set_correct()
+
+    # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
+    # TODO: if wrap monitor, we can get episodic reward
+
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True  # pylint: disable=E1101
+
+    with tf.Session(config=config):
+        checkpoint_callback = CheckpointCallback(save_freq=250000,
+                                                 save_path="./saved_models/self_minus_oppo_reward_shaping_randomnet_impala/",
+                                                 name_prefix="ppo2_cnn_lstm_randomnet")
+
+        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=hyperparams['reward_shaping'],
+                               num_ball_to_win=1,
+                               max_steps=hyperparams['max_steps'], finish_reward=0)
+
+        model = PPO2(RandomCnnLstmPolicy, env, n_steps=hyperparams['n_steps'],
+                     learning_rate=hyperparams['learning_rate'], gamma=0.99,
+                     verbose=1, nminibatches=4,
+                     tensorboard_log="./tensorboard_self_minus_oppo_reward_shaping_randomnet_impala_log/")
+
+        # Eval first to make sure we can eval this...(otherwise there's no point in training...)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO,
+                                      reward_shaping=hyperparams['reward_shaping'], num_ball_to_win=1,
+                                      max_steps=hyperparams['max_steps'], finish_reward=0)
+        mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
+
+        print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
+
+        # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
+        model.learn(total_timesteps=6000000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
+
+        model.save("./saved_models/ppo2_cnn_lstm_self_minus_oppo_reward_shaping_randomnet_impala")
+
+        # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
+        # recurrent policy, no stacking!
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO,
+                                      reward_shaping=hyperparams['reward_shaping'], num_ball_to_win=1,
+                                      max_steps=hyperparams['max_steps'], finish_reward=0)
+        # AssertionError: You must pass only one environment when using this function
+        # But then, the NN is expecting shape of (8, ...)
+        mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
+        print("final model mean reward {}, std reward {}".format(mean_reward, std_reward))
+
+        env.close()
+
 def train_random_ball_setting():
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
@@ -418,11 +565,13 @@ if __name__ == '__main__':
     # train_rad('cutout_color')
     # train_rad('color_jitter')
 
-    import argparse
+    # import argparse
+    #
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--data_aug", type=str, help="")
+    # parser.add_argument("--reward_shaping", action="store_true")
+    # args = parser.parse_args()
+    #
+    # train_rad(args.data_aug, args.reward_shaping)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--data_aug", type=str, help="")
-    parser.add_argument("--reward_shaping", action="store_true")
-    args = parser.parse_args()
-
-    train_rad(args.data_aug, args.reward_shaping)
+    train_randomnet()
