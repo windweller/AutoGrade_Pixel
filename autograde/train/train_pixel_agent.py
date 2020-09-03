@@ -191,7 +191,6 @@ def train():
 
         env.close()
 
-
 def train_random_mixed_theme():
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
@@ -276,8 +275,12 @@ def train_rad(data_aug_name, reward_shaping=False):
                                                  save_path="./saved_models/self_minus_oppo_rad_{}_reward_shape_{}/".format(data_aug_name, reward_shaping),
                                                  name_prefix="ppo2_cnn_lstm_rad_{}".format(data_aug_name))
 
-        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+        if not reward_shaping:
+            env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
                                max_steps=1000, finish_reward=0)
+        else:
+            env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=True, num_ball_to_win=1,
+                                   max_steps=1000, finish_reward=0)  # before we did 0...
 
         # not n_step=256, because shorter helps us learn a better policy; 128 = 2 seconds out
         # model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.99,
