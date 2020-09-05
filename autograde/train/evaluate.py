@@ -654,7 +654,11 @@ def evaluate_rl_models_on_themes():
     # evaluate_thematic_generalization(standard_model, 'Standard Model', "retro")
     # evaluate_thematic_generalization(standard_model, 'Standard Model', "mixed")
 
-    # curriculum_model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+    curriculum_model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+
+    evaluate_thematic_generalization(curriculum_model, 'Curriculum Model', "hardcourt")
+    evaluate_thematic_generalization(curriculum_model, 'Curriculum Model', "retro")
+    evaluate_thematic_generalization(curriculum_model, 'Curriculum Model', "mixed")
 
     # rad_model = PPO2.load("./saved_models/self_minus_oppo_rad_cutout_color.zip")
     #
@@ -662,11 +666,11 @@ def evaluate_rl_models_on_themes():
     # evaluate_thematic_generalization(rad_model, 'RAD Cutout Color Model', "retro")
     # evaluate_thematic_generalization(rad_model, 'RAD Cutout Color Model', "mixed")
 
-    rad_model = PPO2.load("./saved_models/self_minus_oppo_rad_color_jitter.zip")
-
-    evaluate_thematic_generalization(rad_model, 'RAD Color Jitter Model', "hardcourt")
-    evaluate_thematic_generalization(rad_model, 'RAD Color Jitter Model', "retro")
-    evaluate_thematic_generalization(rad_model, 'RAD Color Jitter Model', "mixed")
+    # rad_model = PPO2.load("./saved_models/self_minus_oppo_rad_color_jitter.zip")
+    #
+    # evaluate_thematic_generalization(rad_model, 'RAD Color Jitter Model', "hardcourt")
+    # evaluate_thematic_generalization(rad_model, 'RAD Color Jitter Model', "retro")
+    # evaluate_thematic_generalization(rad_model, 'RAD Color Jitter Model', "mixed")
 
     pass
 
@@ -696,3 +700,4 @@ if __name__ == '__main__':
     # generate_a_few_speed_table()
 
     # evaluate_rl_models_on_themes()
+    evaluate_rl_models_on_themes()
