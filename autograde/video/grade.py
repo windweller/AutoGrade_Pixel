@@ -5,7 +5,6 @@ We generate grades here...
 import numpy as np
 
 import torch
-import torchvision
 
 import os
 import glob
@@ -61,7 +60,9 @@ def evaluate_on_rewards_and_values(n, skip):
         time_per_program = time_so_far / prog
         estimated_time_to_complete = time_per_program * ((n-skip) - prog)
 
-        wandb.log({"Estimated Time to Complete":estimated_time_to_complete, "Spent time": time_so_far})
+        wandb.log({"Estimated Time to Complete (secs)":estimated_time_to_complete,
+                   "Estimated Time to Complete (min)": estimated_time_to_complete / 60,
+                   "Spent time (secs)": time_so_far})
 
 
     for uniq_program_loc in tqdm(glob.glob(pjoin(program_folder, "{}_uniq_programs_skip_{}".format(n, skip), "broken", "*.json"))):
@@ -86,7 +87,9 @@ def evaluate_on_rewards_and_values(n, skip):
         time_per_program = time_so_far / prog
         estimated_time_to_complete = time_per_program * ((n - skip) - prog)
 
-        wandb.log({"Estimated Time to Complete": estimated_time_to_complete, "Spent time": time_so_far})
+        wandb.log({"Estimated Time to Complete (secs)": estimated_time_to_complete,
+                   "Estimated Time to Complete (min)": estimated_time_to_complete / 60,
+                   "Spent time (secs)": time_so_far})
 
     print("Time took {} secs".format(time.time() - start))
 
