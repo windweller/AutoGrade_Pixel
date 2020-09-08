@@ -669,14 +669,38 @@ def record_invariances():
                                       "launch new ball"]}
         """)
 
-    record_human_play_custom_program_to_video(random_program_str.substitute(scene="retro", ball="retro", paddle="retro"),
-                                              "retro.mp4")
+    # retro retro retro
+    # retro retro normal
+    # retro normal retro
+    # normal retro retro
+    # retro normal normal
+    # normal retro normal
+    # retro normal normal
+    # normal normal normal
 
-    record_human_play_custom_program_to_video(random_program_str.substitute(scene="retro", ball="hardcourt", paddle="hardcourt"),
-                                              "retro_normal_normal.mp4")
+    # record_human_play_custom_program_to_video(random_program_str.substitute(scene="retro", ball="retro", paddle="retro"),
+    #                                           "retro.mp4")
 
-    record_human_play_custom_program_to_video(random_program_str.substitute(scene="hardcourt", ball="retro", paddle="retro"),
-                                              "normal_retro_retro.mp4")
+    # record_human_play_custom_program_to_video(random_program_str.substitute(scene="retro", ball="retro", paddle="hardcourt"),
+    #                                           "retro_retro_hardcourt.mp4")
+    #
+    # record_human_play_custom_program_to_video(random_program_str.substitute(scene="retro", ball="hardcourt", paddle="retro"),
+    #                                           "retro_hardcourt_retro.mp4")
+
+    # record_human_play_custom_program_to_video(random_program_str.substitute(scene="hardcourt", ball="retro", paddle="retro"),
+    #                                           "hardcourt_retro_retro.mp4")
+
+    # record_human_play_custom_program_to_video(random_program_str.substitute(scene="retro", ball="hardcourt", paddle="hardcourt"),
+    #                                           "retro_normal_normal.mp4")
+
+    record_human_play_custom_program_to_video(random_program_str.substitute(scene="hardcourt", ball="hardcourt", paddle="retro"),
+                                              "hardcourt_hardcourt_retro.mp4")
+
+    record_human_play_custom_program_to_video(random_program_str.substitute(scene="hardcourt", ball="retro", paddle="hardcourt"),
+                                              "hardcourt_retro_hardcourt.mp4")
+
+    # record_human_play_custom_program_to_video(random_program_str.substitute(scene="hardcourt", ball="hardcourt", paddle="hardcourt"),
+    #                                           "normal.mp4")
 
 def record_action_invariance():
     from string import Template
@@ -729,4 +753,4 @@ if __name__ == '__main__':
     # try_reward_shaping()
 
     # record_invariances()
-    record_action_invariance()
+    # record_action_invariance()

@@ -10,6 +10,7 @@ try:
 except:
     import train_pixel_agent
 
+from tqdm import tqdm
 
 def evaluate():
     # evaluate on the same environment
@@ -517,7 +518,7 @@ def evaluate_speed_five_ball(ball_speed, paddle_speed, standard_model=True):
 
     n_training_envs = 8  # originally training environments
     env = train_pixel_agent.make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False,
-                                             num_ball_to_win=5, max_steps=3000,
+                                             num_ball_to_win=5, max_stteps=3000,
                                              finish_reward=100)
     n_eval_episodes = 5
 
@@ -674,6 +675,164 @@ def evaluate_rl_models_on_themes():
 
     pass
 
+def get_performance(model, json_obj, n_eval_episodes=10):
+    # This is 3-ball evaluation
+
+    program = Program()
+    program.loads(json_obj)
+
+    n_training_envs = 8  # originally training environments
+
+    env = train_pixel_agent.make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False,
+                                             num_ball_to_win=5, max_steps=2000,
+                                             finish_reward=100)  # [-150, +200] 20 * 5 + 100 = 200
+
+    episode_rewards, episode_lengths = [], []
+    for _ in range(n_eval_episodes):
+
+        obs = env.reset()
+        done, state = False, None
+        episode_reward = 0.0
+        episode_length = 0
+
+        zero_completed_obs = np.zeros((n_training_envs,) + env.observation_space.shape)
+        while not done:
+            # concatenate obs
+            # https://github.com/hill-a/stable-baselines/issues/166
+            zero_completed_obs[0, :] = obs
+
+            action, state = model.predict(zero_completed_obs, state=state, deterministic=True)
+            obs, reward, done, _info = env.step([action[0]])
+            episode_reward += reward
+            episode_length += 1
+
+        episode_rewards.append(episode_reward)
+        episode_lengths.append(episode_length)
+
+    mean, low, high, h = mean_confidence_interval(episode_rewards)
+
+    # print("{} Performance under theme {}".format(model_name, setting))
+    # print("Average episode length: {}".format(np.mean(episode_lengths)))
+    # print("Mean reward: {}, CI: {}-{}, range: {}".format(mean, low[0], high[0], h[0]))
+    return mean, h[0]
+
+
+def setup_theme_json_string(scene, ball, paddle):
+    from string import Template
+
+    random_program_str = Template("""
+            {"when run": ["launch new ball"],
+              "when left arrow": ["move left"],
+              "when right arrow": ["move right"],
+              "when ball hits paddle": ["bounce ball"],
+              "when ball hits wall": ["bounce ball", "set '${scene}' scene", "set '${ball}' ball", "set '${paddle}' paddle"],
+              "when ball in goal": ["score point", "launch new ball"],
+              "when ball misses paddle": ["score opponent point",
+                                          "launch new ball"]}
+            """)
+
+    return random_program_str.substitute(scene=scene, ball=ball, paddle=paddle)
+
+def eval_one_model_on_variations(model, pbar):
+    paddle_opts = ['hardcourt', 'retro']
+    ball_opts = ['hardcourt', 'retro']
+    background_opts = ['hardcourt', 'retro']
+
+    header_row = []
+    perf_row = []
+
+    # 8 settings
+    for bg in background_opts:
+        for pt in paddle_opts:
+            for bt in ball_opts:
+                setting_name = "{}-{}-{}".format(bg, pt, bt)
+                header_row.append(setting_name)
+                program_json = setup_theme_json_string(bg, bt, pt)
+                mean, r = get_performance(model, program_json, 10)
+                perf_row.append("{:.1f} $\pm$ {:.1f}".format(mean, r))
+                pbar.update(1)
+
+    return header_row, perf_row
+
+def generate_result_table1():
+    # result table will be made by 5 balls, evaluated 10 times (single environment)
+    # pbar = tqdm(total=8)
+    pbar = tqdm(total=8 * 6)
+
+    standard_model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
+
+    header, perf = eval_one_model_on_variations(standard_model, pbar)
+
+    print("Training Strategy," + ",".join(header))
+    print("Standard, " + ",".join(perf))
+
+    curriculum_model = PPO2.load(
+        "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+
+    _, perf = eval_one_model_on_variations(curriculum_model, pbar)
+    print("Curriculum, " + ",".join(perf))
+
+    colorjitter_model = PPO2.load("saved_models/self_minus_oppo_rad_color_jitter.zip")
+    _, perf = eval_one_model_on_variations(colorjitter_model, pbar)
+    print("Standard + color-jitter, " + ",".join(perf))
+
+    gray_model = PPO2.load("saved_models/self_minus_oppo_rad_gray.zip")
+    _, perf = eval_one_model_on_variations(gray_model, pbar)
+    print("Standard + gray-scale, " + ",".join(perf))
+
+    cutout_model = PPO2.load("saved_models/self_minus_oppo_rad_cutout.zip")
+    _, perf = eval_one_model_on_variations(cutout_model, pbar)
+    print("Standard + cutout, " + ",".join(perf))
+
+    cutout_color_model = PPO2.load("saved_models/self_minus_oppo_rad_cutout_color.zip")
+    _, perf = eval_one_model_on_variations(cutout_color_model, pbar)
+    print("Standard + cutout-color, " + ",".join(perf))
+
+    pbar.close()
+
+def investigate():
+    standard_model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
+    program_json = setup_theme_json_string('hardcourt', 'hardcourt', 'hardcourt')
+
+    program = Program()
+    program.loads(program_json)
+
+    n_training_envs = 8  # originally training environments
+
+    env = train_pixel_agent.make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False,
+                                             num_ball_to_win=5, max_steps=2000,
+                                             finish_reward=100)  # [-150, +200] 20 * 5 + 100 = 200
+
+    episode_rewards, episode_lengths = [], []
+    num_balls_in = []
+    for _ in range(1):
+
+        obs = env.reset()
+        done, state = False, None
+        episode_reward = 0.0
+        episode_length = 0
+        num_ball = 0
+
+        zero_completed_obs = np.zeros((n_training_envs,) + env.observation_space.shape)
+        while not done:
+            # concatenate obs
+            # https://github.com/hill-a/stable-baselines/issues/166
+            zero_completed_obs[0, :] = obs
+
+            action, state = standard_model.predict(zero_completed_obs, state=state, deterministic=True)
+            obs, reward, done, _info = env.step([action[0]])
+            episode_reward += reward
+            episode_length += 1
+            if reward > 0:
+                num_ball += 1
+
+        episode_rewards.append(episode_reward)
+        episode_lengths.append(episode_length)
+
+    mean, low, high, h = mean_confidence_interval(episode_rewards)
+    print(episode_reward)
+    print(num_ball)
+
 
 if __name__ == '__main__':
     pass
@@ -700,4 +859,7 @@ if __name__ == '__main__':
     # generate_a_few_speed_table()
 
     # evaluate_rl_models_on_themes()
-    evaluate_rl_models_on_themes()
+    # evaluate_rl_models_on_themes()
+
+    generate_result_table1()
+    # investigate()

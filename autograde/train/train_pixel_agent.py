@@ -574,4 +574,4 @@ if __name__ == '__main__':
     #
     # train_rad(args.data_aug, args.reward_shaping)
 
-    train_randomnet()
+    # train_randomnet()
