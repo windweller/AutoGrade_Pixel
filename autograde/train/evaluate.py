@@ -11,6 +11,10 @@ except:
     import train_pixel_agent
 
 from tqdm import tqdm
+import os
+
+os.environ['SDL_VIDEODRIVER'] = 'dummy'
+os.environ['SDL_AUDIODRIVER'] = 'dsp'
 
 def evaluate():
     # evaluate on the same environment
