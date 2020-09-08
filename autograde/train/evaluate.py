@@ -759,7 +759,7 @@ def generate_result_table1():
     # pbar = tqdm(total=8)
     pbar = tqdm(total=8 * 6)
 
-    standard_model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
+    standard_model = PPO2.load("./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
 
     header, perf = eval_one_model_on_variations(standard_model, pbar)
 
@@ -767,7 +767,7 @@ def generate_result_table1():
     print("Standard, " + ",".join(perf))
 
     curriculum_model = PPO2.load(
-        "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+        "./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
 
     _, perf = eval_one_model_on_variations(curriculum_model, pbar)
     print("Curriculum, " + ",".join(perf))
