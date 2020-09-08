@@ -759,12 +759,22 @@ def generate_result_table1():
     # pbar = tqdm(total=8)
     pbar = tqdm(total=8 * 6)
 
+    import csv
+
+    file = open("./theme_invariance_model_eval.csv", 'w')
+    writer = csv.writer(file)
+
     standard_model = PPO2.load("./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
 
     header, perf = eval_one_model_on_variations(standard_model, pbar)
 
     print("Training Strategy," + ",".join(header))
+
+    writer.writerow(["Training Strategy"] + header)
+
     print("Standard, " + ",".join(perf))
+
+    writer.writerow(["Standard"] + perf)
 
     curriculum_model = PPO2.load(
         "./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
@@ -772,23 +782,34 @@ def generate_result_table1():
     _, perf = eval_one_model_on_variations(curriculum_model, pbar)
     print("Curriculum, " + ",".join(perf))
 
+    writer.writerow(["Curriculum"] + perf)
+
     colorjitter_model = PPO2.load("saved_models/self_minus_oppo_rad_color_jitter.zip")
     _, perf = eval_one_model_on_variations(colorjitter_model, pbar)
     print("Standard + color-jitter, " + ",".join(perf))
+
+    writer.writerow(["Standard + color-jitter"] + perf)
 
     gray_model = PPO2.load("saved_models/self_minus_oppo_rad_gray.zip")
     _, perf = eval_one_model_on_variations(gray_model, pbar)
     print("Standard + gray-scale, " + ",".join(perf))
 
+    writer.writerow(["Standard + gray-scale"] + perf)
+
     cutout_model = PPO2.load("saved_models/self_minus_oppo_rad_cutout.zip")
     _, perf = eval_one_model_on_variations(cutout_model, pbar)
     print("Standard + cutout, " + ",".join(perf))
+
+    writer.writerow(["Standard + cutout"] + perf)
 
     cutout_color_model = PPO2.load("saved_models/self_minus_oppo_rad_cutout_color.zip")
     _, perf = eval_one_model_on_variations(cutout_color_model, pbar)
     print("Standard + cutout-color, " + ",".join(perf))
 
+    writer.writerow(["Standard + cutout-color"] + perf)
+
     pbar.close()
+    writer.close()
 
 def investigate():
     standard_model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
