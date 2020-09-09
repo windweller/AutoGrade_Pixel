@@ -582,7 +582,7 @@ def run_train():
 
     with tf.Session(config=config):
         checkpoint_callback = CheckpointCallback(save_freq=250000,
-                                                 save_path="./saved_models/self_minus_finish_reward_mixed_theme/",
+                                                 save_path="./saved_models/paper_train_graph_mixed_{}/".format(name),
                                                  name_prefix="ppo2_cnn_lstm_default")
 
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
