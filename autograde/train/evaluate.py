@@ -900,5 +900,5 @@ if __name__ == '__main__':
     # evaluate_rl_models_on_themes()
     # evaluate_rl_models_on_themes()
 
-    generate_result_table1()
+    # generate_result_table1()
     # investigate()

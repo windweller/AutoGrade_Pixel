@@ -110,7 +110,20 @@ def setup_theme_json_string(scene, ball, paddle):
     return random_program_str.substitute(scene=scene, ball=ball, paddle=paddle)
 
 def setup_speed_json_string(ball, paddle):
-    pass
+    from string import Template
+
+    random_program_str = Template("""
+            {"when run": ["launch new ball", "set '{$ball}' ball speed", "set '{$paddle}' paddle speed"],
+              "when left arrow": ["move left"],
+              "when right arrow": ["move right"],
+              "when ball hits paddle": ["bounce ball"],
+              "when ball hits wall": ["bounce ball"],
+              "when ball in goal": ["score point", "launch new ball"],
+              "when ball misses paddle": ["score opponent point",
+                                          "launch new ball"]}
+            """)
+
+    return random_program_str.substitute(ball=ball, paddle=paddle)
 
 def run_evaluate_on_rewards_and_values():
     import argparse
@@ -134,17 +147,21 @@ def gen_traj_for_correct_program_rewards_and_values():
     rlc = RLController(model_file, n_train_env=8)
     rlc.load_model()
 
-    save_stats_dir = './eval_reward_value_stats_correct_programs_8_theme_24_speed/'
+    save_stats_dir = './reference_eval_reward_value_stats_correct_programs_8_theme_24_speed/'
     os.makedirs(save_stats_dir, exist_ok=True)
 
     # each program we run 8 times (24 + 8) = 32
     # one speed "very slow paddle" "very fast ball" does not work (so 24 speed programs, not 25)
     # to just tip things more in our favor
 
+    pbar = tqdm(total=32)
+
     # theme
     paddle_opts = ['hardcourt', 'retro']
     ball_opts = ['hardcourt', 'retro']
     background_opts = ['hardcourt', 'retro']
+
+    start = time.time()
 
     for bg in background_opts:
         for pt in paddle_opts:
@@ -156,12 +173,12 @@ def gen_traj_for_correct_program_rewards_and_values():
 
                 rew_str = ",".join([str(r) for r in rewards]) + '\n'
                 f = open(
-                    save_stats_dir + 'correct_theme_{}_rewards.txt'.format(setting_name),
+                    save_stats_dir + 'correct_speed_{}_rewards.txt'.format(setting_name),
                     'w')
                 f.write(rew_str)
                 f.close()
                 # save other stats
-                filename = save_stats_dir + 'correct_theme_{}_info.json'.format(setting_name)
+                filename = save_stats_dir + 'correct_speed_{}_info.json'.format(setting_name)
                 f = open(filename, 'w')
                 json.dump({'step_rewards': step_rewards,
                            'step_values': step_values,
@@ -169,14 +186,37 @@ def gen_traj_for_correct_program_rewards_and_values():
 
                 # shape: (1, 1000, 8) -- if put in Numpy
                 f.close()
+                pbar.update(1)
 
     # speed
+
     choices = ['very slow', 'slow', 'normal', 'fast', 'very fast']
     for ball_speed in choices:
         for paddle_speed in choices:
             setting_name = "ball_{}_paddle_{}".format(ball_speed.replace(" ", '_'), paddle_speed.replace(" ", '_'))
+            program_json = setup_speed_json_string(ball_speed, paddle_speed)
 
-            pass
+            avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(program_json, 8,
+                                                                                          return_stats=True)
+
+            rew_str = ",".join([str(r) for r in rewards]) + '\n'
+            f = open(
+                save_stats_dir + 'correct_speed_{}_rewards.txt'.format(setting_name),
+                'w')
+            f.write(rew_str)
+            f.close()
+            # save other stats
+            filename = save_stats_dir + 'correct_speed_{}_info.json'.format(setting_name)
+            f = open(filename, 'w')
+            json.dump({'step_rewards': step_rewards,
+                       'step_values': step_values,
+                       'step_dones': step_dones}, f)
+
+            # shape: (1, 1000, 8) -- if put in Numpy
+            f.close()
+            pbar.update(1)
+
+    print("Totally took {} secs".format(time.time() - start))
 
 def gen_traj_for_reference_broken_program_rewards_and_values():
     # 10 broken programs
@@ -186,4 +226,4 @@ def gen_traj_for_reference_broken_program_rewards_and_values():
 if __name__ == '__main__':
     # run_evaluate_on_rewards_and_values()
     gen_traj_for_correct_program_rewards_and_values()
-    gen_traj_for_reference_broken_program_rewards_and_values()
+    # gen_traj_for_reference_broken_program_rewards_and_values()
