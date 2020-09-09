@@ -223,7 +223,7 @@ def gen_traj_for_correct_program_rewards_and_values():
     rlc = RLController(model_file, n_train_env=8)
     rlc.load_model()
 
-    save_stats_dir = './reference_eval_reward_value_stats_correct_programs_8_theme_24_speed/'
+    save_stats_dir = './reference_eval_reward_value_stats_correct_programs_8_theme_15_speed/'
     os.makedirs(save_stats_dir, exist_ok=True)
 
     # each program we run 8 times (24 + 8) = 32
@@ -238,6 +238,9 @@ def gen_traj_for_correct_program_rewards_and_values():
     choices = ['very slow', 'slow', 'normal', 'fast', 'very fast']
     for ball_speed in choices:
         for paddle_speed in choices:
+            if paddle_speed == 'very slow' or paddle_speed == 'slow':
+                continue
+
             setting_name = "ball_{}_paddle_{}".format(ball_speed.replace(" ", '_'), paddle_speed.replace(" ", '_'))
             program_json = setup_speed_json_string(ball_speed, paddle_speed)
 
@@ -310,7 +313,7 @@ def gen_traj_for_reference_broken_program_rewards_and_values():
     program_folder = pjoin(pathlib.Path(__file__).parent.parent.absolute(), "envs/bounce_programs/broken_small/")
 
     for uniq_program_loc in glob.glob(pjoin(program_folder, "*.json")):
-        avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8*3,
+        avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8*2,  # 8 * 3
                                                                                       return_stats=True)
         rew_str = ",".join([str(r) for r in rewards]) + '\n'
         f = open(save_stats_dir + 'broken_{}_rewards.txt'.format(uniq_program_loc.split('/')[-1].rstrip(".json")), 'w')
@@ -331,6 +334,6 @@ def gen_traj_for_reference_broken_program_rewards_and_values():
 if __name__ == '__main__':
     pass
     # run_evaluate_on_rewards_and_values()
-    # gen_traj_for_correct_program_rewards_and_values()
+    gen_traj_for_correct_program_rewards_and_values()
     # gen_traj_for_reference_broken_program_rewards_and_values()
-    evaluate_on_tail()
+    # evaluate_on_tail()
