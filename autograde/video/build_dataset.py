@@ -392,14 +392,14 @@ class RLController(object):
         all_episode_rewards = []
         all_episode_step_rewards, all_episode_step_values, all_episode_step_dones = [], [], []
 
-        for _ in tqdm(range(record_rounds)):
+        for _ in range(record_rounds):
 
             obs = env.reset()
             done, state = False, None
             episode_reward = np.zeros(self.n_train_env)
             step_rewards, step_values, step_dones = [], [], []
 
-            for _ in tqdm(range(1000)):
+            for _ in range(1000):
                 # in this recording scheme, if an environment is terminated/done, it's automatically
                 # reset
                 # action, state = self.model.predict(obs, state=state, deterministic=True)
