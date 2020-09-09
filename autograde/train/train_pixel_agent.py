@@ -478,8 +478,6 @@ def train_random_ball_setting():
     # program.set_correct()
     program.load("./autograde/envs/bounce_programs/mixed_theme_train.json")
 
-    # env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False)
-    # TODO: if wrap monitor, we can get episodic reward
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True  # pylint: disable=E1101
@@ -556,6 +554,84 @@ def test_observations():
     print(i)
     env.close()
 
+def run_train():
+    import argparse
+    # train standard or mixed-theme start...for the training graph
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--curriculum", action="store_true")
+    args = parser.parse_args()
+    # standard mixed-theme vs. curriculum mixed-theme
+    # 6M vs. 3M + 3M
+
+    import wandb
+    name = 'curriculum' if args.curriculum else "standard"
+    wandb.init(sync_tensorboard=True, project="autograde-bounce",
+               name="paper_train_graph_mixed_{}".format(name))
+
+    import os
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    os.environ['SDL_AUDIODRIVER'] = 'dsp'
+
+    program = Program()
+    # program.set_correct()
+    program.load("./autograde/envs/bounce_programs/mixed_theme_train.json")
+
+    # then model here we decide
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True  # pylint: disable=E1101
+
+    with tf.Session(config=config):
+        checkpoint_callback = CheckpointCallback(save_freq=250000,
+                                                 save_path="./saved_models/self_minus_finish_reward_mixed_theme/",
+                                                 name_prefix="ppo2_cnn_lstm_default")
+
+        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                               max_steps=1000, finish_reward=0)
+        # not n_step=256, because shorter helps us learn a better policy; 128 = 2 seconds out
+
+        if args.curriculum:
+            model = PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
+            model.set_env(env)
+            model.tensorboard_log = "./tensorboard_paper_train_graph_mixed_curriculum_3M_log/"
+            model.verbose = 1
+            model.nminibatches = 4
+            model.learning_rate = 5e-4
+
+            steps = 3000000
+            save_name = 'curriculum'
+        else:
+            model = PPO2('CnnLstmPolicy', env, n_steps=256, learning_rate=5e-4, gamma=0.99,
+                         verbose=1, nminibatches=4, tensorboard_log="./tensorboard_paper_train_graph_mixed_standard_6M_log/")
+            steps = 6000000
+            save_name = 'standard'
+
+        # Eval first to make sure we can eval this...(otherwise there's no point in training...)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                                      max_steps=1000, finish_reward=0)
+        mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
+
+        print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
+
+        # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
+
+        model.learn(total_timesteps=steps, callback=CallbackList([checkpoint_callback]),
+                    tb_log_name='PPO2')  # 3M
+
+        model.save("./saved_models/paper_train_graph_mixed_{}".format(save_name))
+
+        # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
+        # recurrent policy, no stacking!
+        program.set_correct_retro_theme()
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                                      max_steps=1000, finish_reward=0)
+
+        # AssertionError: You must pass only one environment when using this function
+        # But then, the NN is expecting shape of (8, ...)
+        mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
+        print("final model mean reward {}, std reward {}".format(mean_reward, std_reward))
+
+        env.close()
+
 
 if __name__ == '__main__':
     pass
@@ -575,3 +651,6 @@ if __name__ == '__main__':
     # train_rad(args.data_aug, args.reward_shaping)
 
     # train_randomnet()
+
+    # generate paper RL training graph
+    run_train()
