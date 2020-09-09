@@ -834,9 +834,36 @@ def setup_speed_json_string(ball, paddle):
 def generate_result_table2():
     # speed variants!!
     # while you generate, you should save traj them too.
-    # TODO
-    pass
+    pbar = tqdm(total=25)
 
+    curriculum_model = PPO2.load(
+        "./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+
+    rows = []
+
+    choices = ['very slow', 'slow', 'normal', 'fast', 'very fast']
+
+    rows.append([' '] + choices) # header
+
+    for paddle_speed in choices:
+        # this "row" correspond to paddle speed as row (on left), ball speed as column (on top)
+        row = []
+        for ball_speed in choices:
+            program_json = setup_speed_json_string(ball_speed, paddle_speed)
+            mean, r = get_performance(curriculum_model, program_json, 10)
+            row.append("{:.1f} $\pm$ {:.1f}".format(mean, r))
+            pbar.update(1)
+
+        rows.append([paddle_speed] + row)
+
+    import csv
+    file = open("./speed_invariance_curriculum_model_eval.csv", 'w')
+    writer = csv.writer(file)
+
+    for row in rows:
+        writer.writerow(row)
+
+    file.close()
 
 def investigate():
     standard_model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
@@ -964,4 +991,6 @@ if __name__ == '__main__':
     # generate_result_table1()
     # investigate()
 
-    investigate2()
+    generate_result_table2()
+
+    # investigate2()

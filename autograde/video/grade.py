@@ -247,7 +247,9 @@ def gen_traj_for_reference_broken_program_rewards_and_values():
                    'step_values': step_values,
                    'step_dones': step_dones}, f)
         f.close()
-        pbar.close()
+        pbar.update(1)
+
+    pbar.close()
 
 
 if __name__ == '__main__':
