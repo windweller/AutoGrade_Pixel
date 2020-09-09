@@ -230,6 +230,7 @@ def gen_traj_for_correct_program_rewards_and_values():
     # one speed "very slow paddle" "very fast ball" does not work (so 24 speed programs, not 25)
     # to just tip things more in our favor
 
+    # 15 + 8 = 23
     start = time.time()
     pbar = tqdm(total=32)
 
@@ -300,12 +301,14 @@ def gen_traj_for_reference_broken_program_rewards_and_values():
     # 10 broken programs
     # so need to run 8 * 3 times...to create a balanced dataset
 
+    # 8 * 2 instead
+
     model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
                        "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
     rlc = RLController(model_file, n_train_env=8)
     rlc.load_model()
 
-    save_stats_dir = './reference_eval_reward_value_stats_broken_10_programs/'
+    save_stats_dir = './reference_eval_reward_value_stats_broken_10_programs_2rounds/'
     os.makedirs(save_stats_dir, exist_ok=True)
 
     pbar = tqdm(total=10)
@@ -334,6 +337,6 @@ def gen_traj_for_reference_broken_program_rewards_and_values():
 if __name__ == '__main__':
     pass
     # run_evaluate_on_rewards_and_values()
-    gen_traj_for_correct_program_rewards_and_values()
-    # gen_traj_for_reference_broken_program_rewards_and_values()
+    # gen_traj_for_correct_program_rewards_and_values()
+    gen_traj_for_reference_broken_program_rewards_and_values()
     # evaluate_on_tail()
