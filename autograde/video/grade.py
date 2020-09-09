@@ -113,7 +113,7 @@ def setup_speed_json_string(ball, paddle):
     from string import Template
 
     random_program_str = Template("""
-            {"when run": ["launch new ball", "set '{$ball}' ball speed", "set '{$paddle}' paddle speed"],
+            {"when run": ["launch new ball", "set '${ball}' ball speed", "set '${paddle}' paddle speed"],
               "when left arrow": ["move left"],
               "when right arrow": ["move right"],
               "when ball hits paddle": ["bounce ball"],
@@ -156,6 +156,34 @@ def gen_traj_for_correct_program_rewards_and_values():
 
     pbar = tqdm(total=32)
 
+    # speed
+
+    choices = ['very slow', 'slow', 'normal', 'fast', 'very fast']
+    for ball_speed in choices:
+        for paddle_speed in choices:
+            setting_name = "ball_{}_paddle_{}".format(ball_speed.replace(" ", '_'), paddle_speed.replace(" ", '_'))
+            program_json = setup_speed_json_string(ball_speed, paddle_speed)
+
+            avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(program_json, 8,
+                                                                                          return_stats=True)
+
+            rew_str = ",".join([str(r) for r in rewards]) + '\n'
+            f = open(
+                save_stats_dir + 'correct_speed_{}_rewards.txt'.format(setting_name),
+                'w')
+            f.write(rew_str)
+            f.close()
+            # save other stats
+            filename = save_stats_dir + 'correct_speed_{}_info.json'.format(setting_name)
+            f = open(filename, 'w')
+            json.dump({'step_rewards': step_rewards,
+                       'step_values': step_values,
+                       'step_dones': step_dones}, f)
+
+            # shape: (1, 1000, 8) -- if put in Numpy
+            f.close()
+            pbar.update(1)
+
     # theme
     paddle_opts = ['hardcourt', 'retro']
     ball_opts = ['hardcourt', 'retro']
@@ -188,33 +216,6 @@ def gen_traj_for_correct_program_rewards_and_values():
                 f.close()
                 pbar.update(1)
 
-    # speed
-
-    choices = ['very slow', 'slow', 'normal', 'fast', 'very fast']
-    for ball_speed in choices:
-        for paddle_speed in choices:
-            setting_name = "ball_{}_paddle_{}".format(ball_speed.replace(" ", '_'), paddle_speed.replace(" ", '_'))
-            program_json = setup_speed_json_string(ball_speed, paddle_speed)
-
-            avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(program_json, 8,
-                                                                                          return_stats=True)
-
-            rew_str = ",".join([str(r) for r in rewards]) + '\n'
-            f = open(
-                save_stats_dir + 'correct_speed_{}_rewards.txt'.format(setting_name),
-                'w')
-            f.write(rew_str)
-            f.close()
-            # save other stats
-            filename = save_stats_dir + 'correct_speed_{}_info.json'.format(setting_name)
-            f = open(filename, 'w')
-            json.dump({'step_rewards': step_rewards,
-                       'step_values': step_values,
-                       'step_dones': step_dones}, f)
-
-            # shape: (1, 1000, 8) -- if put in Numpy
-            f.close()
-            pbar.update(1)
 
     print("Totally took {} secs".format(time.time() - start))
 

@@ -853,7 +853,7 @@ class ShadowEngine(object):
 
     def extract_speed(self, cmd):
         speed_text = cmd.split("'")[1]
-        assert  speed_text in speed_text_available
+        assert speed_text in speed_text_available, "the speed test used is {}".format(speed_text)
 
         if speed_text == 'random':
             speed_text = self.np_random.choice(speed_choices)  # choose a non-random option

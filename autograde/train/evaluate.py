@@ -815,6 +815,22 @@ def generate_result_table1():
     pbar.close()
     file.close()
 
+def setup_speed_json_string(ball, paddle):
+    from string import Template
+
+    random_program_str = Template("""
+            {"when run": ["launch new ball", "set '${ball}' ball speed", "set '${paddle}' paddle speed"],
+              "when left arrow": ["move left"],
+              "when right arrow": ["move right"],
+              "when ball hits paddle": ["bounce ball"],
+              "when ball hits wall": ["bounce ball"],
+              "when ball in goal": ["score point", "launch new ball"],
+              "when ball misses paddle": ["score opponent point",
+                                          "launch new ball"]}
+            """)
+
+    return random_program_str.substitute(ball=ball, paddle=paddle)
+
 def generate_result_table2():
     # speed variants!!
     # while you generate, you should save traj them too.
@@ -835,6 +851,51 @@ def investigate():
     # env = train_pixel_agent.make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False,
     #                                          num_ball_to_win=5, max_steps=2000,
     #                                          finish_reward=100)  # [-150, +200] 20 * 5 + 100 = 200
+
+    # see if 1000 and 3 balls is a good pairing...
+    env = train_pixel_agent.make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False,
+                                             num_ball_to_win=3, max_steps=1500,
+                                             finish_reward=100)  # [-130, +160] 20 * 3 + 100 = 160
+
+    episode_rewards, episode_lengths = [], []
+    num_balls_in = []
+    for _ in range(1):
+
+        obs = env.reset()
+        done, state = False, None
+        episode_reward = 0.0
+        episode_length = 0
+        num_ball = 0
+
+        zero_completed_obs = np.zeros((n_training_envs,) + env.observation_space.shape)
+        while not done:
+            # concatenate obs
+            # https://github.com/hill-a/stable-baselines/issues/166
+            zero_completed_obs[0, :] = obs
+
+            action, state = standard_model.predict(zero_completed_obs, state=state, deterministic=True)
+            obs, reward, done, _info = env.step([action[0]])
+            episode_reward += reward
+            episode_length += 1
+            if reward > 0:
+                num_ball += 1
+
+        episode_rewards.append(episode_reward)
+        episode_lengths.append(episode_length)
+
+    mean, low, high, h = mean_confidence_interval(episode_rewards)
+    print(episode_reward)
+    print(episode_length)
+    print(num_ball)
+
+def investigate2():
+    standard_model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
+    program_json = setup_speed_json_string('very slow', 'very slow')
+
+    program = Program()
+    program.loads(program_json)
+
+    n_training_envs = 8  # originally training environments
 
     # see if 1000 and 3 balls is a good pairing...
     env = train_pixel_agent.make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False,
@@ -902,3 +963,5 @@ if __name__ == '__main__':
 
     # generate_result_table1()
     # investigate()
+
+    investigate2()
