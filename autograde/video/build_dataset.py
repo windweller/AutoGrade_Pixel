@@ -381,8 +381,10 @@ class RLController(object):
         program.loads(program_json)
 
         # originally it was num_ball_to_win=3, max_steps=1500, finish_reward=? might be 100
+
+        # 1500 might be better...3 balls should be ok
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=3,
-                                   max_steps=1500,
+                                   max_steps=1000,
                                    finish_reward=100)  # [-130, 160]
 
         record_rounds = num_evals // self.n_train_env

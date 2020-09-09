@@ -7,15 +7,24 @@ We use Baselines in two ways:
 one as
 """
 
-from torch import nn
-
-import pyro
-import pyro.distributions as dist
-from pyro.nn import PyroModule, PyroSample
-
-assert pyro.__version__.startswith('1.4.0')
+import torch
+import torch.nn as nn
 
 
+# import pyro
+# import pyro.distributions as dist
+# from pyro.nn import PyroModule, PyroSample
 
-class MarkovBaseline(object):
+# assert pyro.__version__.startswith('1.4.0')
+
+class MarkovTrajBaseline(object):
+    pass
+
+
+class LSTMClassifier(object):
+    pass
+
+
+if __name__ == '__main__':
+    # add things
     pass
