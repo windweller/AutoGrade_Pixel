@@ -253,6 +253,6 @@ def gen_traj_for_reference_broken_program_rewards_and_values():
 
 
 if __name__ == '__main__':
-    # run_evaluate_on_rewards_and_values()
+    run_evaluate_on_rewards_and_values()
     # gen_traj_for_correct_program_rewards_and_values()
-    gen_traj_for_reference_broken_program_rewards_and_values()
+    # gen_traj_for_reference_broken_program_rewards_and_values()
