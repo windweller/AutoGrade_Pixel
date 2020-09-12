@@ -650,9 +650,9 @@ def train_speed_mixed():
     program = Program()
     # program.set_correct()
     if args.paddle_speed == 'slow':
-        program.load("./autograde/envs/bounce_programs/correct_sample_theme_with_slow_speed.json")
+        program.load("./autograde/envs/bounce_programs/correct_small/correct_sample_theme_with_slow_speed.json")
     else:
-        program.load("./autograde/envs/bounce_programs/correct_sample_with_theme_very_slow_speed.json")
+        program.load("./autograde/envs/bounce_programs/correct_small/correct_sample_with_theme_very_slow_speed.json")
 
     # then model here we decide
     config = tf.ConfigProto()
