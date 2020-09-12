@@ -639,9 +639,9 @@ def train_speed_mixed():
     args = parser.parse_args()
 
     import wandb
-    name = 'curriculum' if args.curriculum else "standard"
+    name = 'slow' if args.paddle_speed else "very_slow"
     wandb.init(sync_tensorboard=True, project="autograde-bounce",
-               name="paper_train_graph_mixed_{}".format(name))
+               name="paper_mixed_theme_continue_mixed_ball_speed_paddle_{}".format(name))
 
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
@@ -660,7 +660,7 @@ def train_speed_mixed():
 
     with tf.Session(config=config):
         checkpoint_callback = CheckpointCallback(save_freq=100000,
-                                                 save_path="./saved_models/paper_train_graph_mixed_{}/".format(name),
+                                                 save_path="./saved_models/paper_mixed_theme_continue_mixed_ball_speed_paddle_{}/".format(args.paddle_speed),
                                                  name_prefix="ppo2_cnn_lstm_default")
 
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
