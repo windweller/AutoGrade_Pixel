@@ -632,6 +632,70 @@ def run_train():
 
         env.close()
 
+def train_speed_mixed():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--paddle_speed", type=str, help="slow or very_slow")
+    args = parser.parse_args()
+
+    import wandb
+    name = 'curriculum' if args.curriculum else "standard"
+    wandb.init(sync_tensorboard=True, project="autograde-bounce",
+               name="paper_train_graph_mixed_{}".format(name))
+
+    import os
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    os.environ['SDL_AUDIODRIVER'] = 'dsp'
+
+    program = Program()
+    # program.set_correct()
+    if args.paddle_speed == 'slow':
+        program.load("./autograde/envs/bounce_programs/correct_sample_theme_with_slow_speed.json")
+    else:
+        program.load("./autograde/envs/bounce_programs/correct_sample_with_theme_very_slow_speed.json")
+
+    # then model here we decide
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True  # pylint: disable=E1101
+
+    with tf.Session(config=config):
+        checkpoint_callback = CheckpointCallback(save_freq=100000,
+                                                 save_path="./saved_models/paper_train_graph_mixed_{}/".format(name),
+                                                 name_prefix="ppo2_cnn_lstm_default")
+
+        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                               max_steps=1000, finish_reward=0)
+
+        model = PPO2.load("./saved_models/paper_train_graph_mixed_standard.zip")
+        steps = 3000000
+
+        # Eval first to make sure we can eval this...(otherwise there's no point in training...)
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                                      max_steps=1000, finish_reward=0)
+        mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
+
+        print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
+
+        # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
+
+        model.learn(total_timesteps=steps, callback=CallbackList([checkpoint_callback]),
+                    tb_log_name='PPO2')  # 3M
+
+        model.save("./saved_models/paper_mixed_theme_continue_mixed_ball_speed_paddle_{}".format(args.paddle_speed))
+
+        # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
+        # recurrent policy, no stacking!
+        program.set_correct_retro_theme()
+        single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
+                                      max_steps=1000, finish_reward=0)
+
+        # AssertionError: You must pass only one environment when using this function
+        # But then, the NN is expecting shape of (8, ...)
+        mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
+        print("final model mean reward {}, std reward {}".format(mean_reward, std_reward))
+
+        env.close()
+
 
 if __name__ == '__main__':
     pass
@@ -653,4 +717,5 @@ if __name__ == '__main__':
     # train_randomnet()
 
     # generate paper RL training graph
-    run_train()
+    # run_train()
+    train_speed_mixed()

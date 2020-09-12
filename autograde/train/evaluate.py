@@ -607,11 +607,11 @@ def evaluate_thematic_generalization(model, model_name, setting, n_eval_episodes
         program.set_correct()
     elif setting == 'mixed':
         program.loads("""
-        {"when run": ["launch new ball"],
+        {"when run": ["launch new ball", "set scene 'random'", "set ball 'random'", "set paddle 'random'"],
           "when left arrow": ["move left"],
           "when right arrow": ["move right"],
-          "when ball hits paddle": ["bounce ball", "set scene 'random'"],
-          "when ball hits wall": ["bounce ball", "set scene 'random'", "set ball 'random'", "set paddle 'random'"],
+          "when ball hits paddle": ["bounce ball"],
+          "when ball hits wall": ["bounce ball"],
           "when ball in goal": ["score point", "launch new ball"],
           "when ball misses paddle": ["score opponent point",
                                       "launch new ball"]}
@@ -619,10 +619,9 @@ def evaluate_thematic_generalization(model, model_name, setting, n_eval_episodes
 
     n_training_envs = 8  # originally training environments
 
-    # TODO: compute average episode length? but 40 secs is long enough perhaps
     env = train_pixel_agent.make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False,
-                                             num_ball_to_win=5, max_steps=1200,
-                                             finish_reward=50)  # [-100, +200]
+                                             num_ball_to_win=5, max_steps=2000,
+                                             finish_reward=100)  # [-150, +200]
 
     episode_rewards, episode_lengths = [], []
     for _ in range(n_eval_episodes):
@@ -659,11 +658,11 @@ def evaluate_rl_models_on_themes():
     # evaluate_thematic_generalization(standard_model, 'Standard Model', "retro")
     # evaluate_thematic_generalization(standard_model, 'Standard Model', "mixed")
 
-    curriculum_model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
-
-    evaluate_thematic_generalization(curriculum_model, 'Curriculum Model', "hardcourt")
-    evaluate_thematic_generalization(curriculum_model, 'Curriculum Model', "retro")
-    evaluate_thematic_generalization(curriculum_model, 'Curriculum Model', "mixed")
+    # curriculum_model = PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+    #
+    # evaluate_thematic_generalization(curriculum_model, 'Curriculum Model', "hardcourt")
+    # evaluate_thematic_generalization(curriculum_model, 'Curriculum Model', "retro")
+    # evaluate_thematic_generalization(curriculum_model, 'Curriculum Model', "mixed")
 
     # rad_model = PPO2.load("./saved_models/self_minus_oppo_rad_cutout_color.zip")
     #
@@ -814,6 +813,17 @@ def generate_result_table1():
 
     pbar.close()
     file.close()
+
+def evaluate_one_model_on_table1():
+    pbar = tqdm(total=8)
+
+    standard_model = PPO2.load(
+        "./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
+
+    header, perf = eval_one_model_on_variations(standard_model, pbar)
+    print(header)
+    print(perf)
+    # TODO: evaluate the model!!!
 
 def setup_speed_json_string(ball, paddle):
     from string import Template
@@ -986,11 +996,11 @@ if __name__ == '__main__':
     # generate_a_few_speed_table()
 
     # evaluate_rl_models_on_themes()
-    # evaluate_rl_models_on_themes()
+    evaluate_rl_models_on_themes()
 
     # generate_result_table1()
     # investigate()
 
-    generate_result_table2()
+    # generate_result_table2()
 
     # investigate2()
