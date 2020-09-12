@@ -667,6 +667,11 @@ def train_speed_mixed():
                                max_steps=1000, finish_reward=0)
 
         model = PPO2.load("./saved_models/paper_train_graph_mixed_standard.zip")
+        model.set_env(env)
+        model.tensorboard_log = "./tensorboard_paper_mixed_theme_continue_mixed_ball_speed_paddle_{}_log/".format(args.paddle_speed)
+        model.verbose = 1
+        model.nminibatches = 4
+        model.learning_rate = 5e-4
         steps = 3000000
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
