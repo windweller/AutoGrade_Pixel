@@ -675,8 +675,9 @@ def train_speed_mixed():
         steps = 3000000
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
+        # 5000 = 100 secs
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
-                                      max_steps=1000, finish_reward=0)
+                                      max_steps=5000, finish_reward=0)
         mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
 
         print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
