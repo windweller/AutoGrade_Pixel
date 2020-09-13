@@ -639,7 +639,7 @@ def train_speed_mixed():
     args = parser.parse_args()
 
     import wandb
-    name = 'slow' if args.paddle_speed else "very_slow"
+    name = 'slow' if args.paddle_speed == 'slow' else "very_slow"
     wandb.init(sync_tensorboard=True, project="autograde-bounce",
                name="paper_mixed_theme_continue_mixed_ball_speed_paddle_{}".format(name))
 
