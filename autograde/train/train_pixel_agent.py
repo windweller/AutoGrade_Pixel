@@ -664,7 +664,7 @@ def train_speed_mixed():
                                                  name_prefix="ppo2_cnn_lstm_default")
 
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
-                               max_steps=1000, finish_reward=0)
+                               max_steps=5000, finish_reward=0)
 
         model = PPO2.load("./saved_models/paper_train_graph_mixed_standard.zip")
         model.set_env(env)
@@ -693,7 +693,7 @@ def train_speed_mixed():
         # recurrent policy, no stacking!
         program.set_correct_retro_theme()
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
-                                      max_steps=1000, finish_reward=0)
+                                      max_steps=5000, finish_reward=0)
 
         # AssertionError: You must pass only one environment when using this function
         # But then, the NN is expecting shape of (8, ...)
