@@ -1,6 +1,7 @@
 import os
 import json
 import pandas as pd
+from os.path import join as pjoin
 
 from matplotlib import pyplot as plt
 import seaborn as sns
@@ -19,13 +20,13 @@ def extract_reference_program_data_from_dir(correct_ref_dir, broken_ref_dir):
         # we need to get rid of a bunch of speed variations...
         
         if '.txt' in file_name:
-            f = open(correct_ref_dir + "{}".format(file_name))
+            f = open(pjoin(correct_ref_dir, "{}".format(file_name)))
             text = f.readlines()[0]
             rewards = [float(r) for r in text.split(',')]
             correct_rewards.extend(rewards)
             correct_program_to_rewards[file_name.lstrip("correct_").rstrip("_program_rewards.txt")] = rewards
-        else:
-            f = open(correct_ref_dir + "{}".format(file_name))
+        elif '.json' in file_name:
+            f = open(pjoin(correct_ref_dir, "{}".format(file_name)))
             info_dic = json.load(f)
             program_name = file_name.lstrip("correct_").rstrip("_program_info.json")
             correct_program_to_info[program_name] = {'step_values': info_dic['step_values'],
@@ -33,13 +34,13 @@ def extract_reference_program_data_from_dir(correct_ref_dir, broken_ref_dir):
     # broken reference files
     for file_name in os.listdir(broken_ref_dir):
         if '.txt' in file_name:
-            f = open(broken_ref_dir + "{}".format(file_name))
+            f = open(pjoin(broken_ref_dir, "{}".format(file_name)))
             text = f.readlines()[0]
             rewards = [float(r) for r in text.split(',')]
             broken_rewards.extend(rewards)
             broken_program_to_rewards[file_name.lstrip("broken_").rstrip("_program_rewards.txt")] = rewards
-        else:
-            f = open(broken_ref_dir + "{}".format(file_name))
+        elif '.json' in file_name:
+            f = open(pjoin(broken_ref_dir, "{}".format(file_name)))
             info_dic = json.load(f)
             program_name = file_name.lstrip("broken_").rstrip("_program_info.json")
             broken_program_to_info[program_name] = {'step_values': info_dic['step_values'],
@@ -65,6 +66,40 @@ def visualize_distributions():
     correct_program_to_rewards, broken_program_to_rewards, correct_program_to_info, broken_program_to_info, correct_rewards, broken_rewards = extract_reference_program_data_filtered()
     df = pd.DataFrame(data={'Collected Reward': correct_rewards + broken_rewards, "Reference Program Type": ['Correct'] * len(correct_rewards) + ['Incorrect'] * len(broken_rewards)})
     sns.displot(data=df, x="Collected Reward", hue="Reference Program Type", kind='kde', fill=True)
+
+def extract_evaluation_program_data(folder):
+    correct_program_to_rewards = {}
+    broken_program_to_rewards = {}
+
+    correct_program_to_info = {}
+    broken_program_to_info = {}
+
+    correct_rewards, broken_rewards = [], []
+    # ../../eval_reward_value_stats_n1000
+    for file_name in os.listdir(folder):
+        if '.txt' in file_name:
+            f = open(pjoin(folder, file_name))
+            text = f.readlines()[0]
+            rewards = [float(r) for r in text.split(',')]
+            if 'correct' in file_name:
+                correct_rewards.extend(rewards)
+                correct_program_to_rewards[file_name.lstrip("correct_").rstrip("_program_rewards.txt")] = rewards
+            else:
+                broken_rewards.extend(rewards)
+                broken_program_to_rewards[file_name.lstrip("broken_").rstrip("_program_rewards.txt")] = rewards
+        elif '.json' in file_name:
+            f = open(pjoin(folder, file_name))
+            info_dic = json.load(f)
+            if 'correct' in file_name:
+                program_name = file_name.lstrip("correct_").rstrip("_program_info.json")
+                correct_program_to_info[program_name] = {'step_values': info_dic['step_values'],
+                                                         'step_rewards': info_dic['step_rewards']}
+            else:
+                program_name = file_name.lstrip("broken_").rstrip("_program_info.json")
+                broken_program_to_info[program_name] = {'step_values': info_dic['step_values'],
+                                                         'step_rewards': info_dic['step_rewards']}
+                
+    return correct_program_to_rewards, broken_program_to_rewards, correct_program_to_info, broken_program_to_info, correct_rewards, broken_rewards
 
 if __name__ == "__main__":
     print("here")

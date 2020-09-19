@@ -12,6 +12,9 @@ tensorboard_*/
 wandb/
 *.csv
 log/
+eval_*
+reference_*
+saved_models/
 
 # Created by .ignore support plugin (hsz.mobi)
 ### JetBrains template
