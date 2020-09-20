@@ -623,7 +623,7 @@ def run_train():
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
-        program.set_correct_retro_theme()
+        program.set_correct()
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
                                       max_steps=1000, finish_reward=0)
 
@@ -684,7 +684,7 @@ def train_normal_6M():
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
-        program.set_correct_retro_theme()
+        program.set_correct()
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
                                       max_steps=1000, finish_reward=0)
 
