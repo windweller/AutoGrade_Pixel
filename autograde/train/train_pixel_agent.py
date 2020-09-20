@@ -329,9 +329,12 @@ def train_random_mixed_theme():
 def train_rad(data_aug_name, reward_shaping=False):
     # instead of training w/ mixed theme, we train with RAD instead, and evaluate if it's any good
 
+    # now we ditch curriculum learning, just try end-to-end
+    # with RAD, 6M steps, all configurations
+
     import wandb
     wandb.init(sync_tensorboard=True, project="autograde-bounce",
-               name="self_minus_oppo_rad_{}_reward_shape_{}".format(data_aug_name, reward_shaping))
+               name="train_graph_rad_{}_reward_shape_{}_6M".format(data_aug_name, reward_shaping))
 
     from rad_ppo2 import PPO2
     # The PPO was not modified, but Runner is.
@@ -350,7 +353,7 @@ def train_rad(data_aug_name, reward_shaping=False):
 
     with tf.Session(config=config):
         checkpoint_callback = CheckpointCallback(save_freq=25000,  # 500 * 8 = 4000 | 400000 | 200000
-                                                 save_path="./saved_models/self_minus_oppo_rad_{}_reward_shape_{}/".format(data_aug_name, reward_shaping),
+                                                 save_path="./saved_models/train_graph_rad_{}_reward_shape_{}_6M/".format(data_aug_name, reward_shaping),
                                                  name_prefix="ppo2_cnn_lstm_rad_{}".format(data_aug_name))
 
         if not reward_shaping:
@@ -361,18 +364,17 @@ def train_rad(data_aug_name, reward_shaping=False):
                                    max_steps=1000, finish_reward=0)  # before we did 0...
 
         # not n_step=256, because shorter helps us learn a better policy; 128 = 2 seconds out
-        # model = PPO2(CnnLstmPolicy, env, n_steps=256, learning_rate=5e-4, gamma=0.99,
-        #              verbose=1, nminibatches=4, tensorboard_log="./tensorboard_self_minus_finish_reward_mixed_theme_log/")
+        model = PPO2('CnnLstmPolicy', env, n_steps=256, learning_rate=5e-4, gamma=0.99,
+                     verbose=1, nminibatches=4, tensorboard_log="./tensorboard_train_graph_rad_{}_reward_shape_{}_6M_log/".format(data_aug_name, reward_shaping))
 
-        model = PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
-        # PPO2 set data_aug
-        model.data_aug = data_aug_name # 'cutout_color'
-        model.set_env(env)
-
-        model.tensorboard_log = "./tensorboard_self_minus_oppo_rad_{}_reward_shaping_{}_log/".format(data_aug_name, reward_shaping)
-        model.verbose = 1
-        model.nminibatches = 4
-        model.learning_rate = 5e-4
+        # model = PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
+        # model.data_aug = data_aug_name # 'cutout_color'
+        # model.set_env(env)
+        #
+        # model.tensorboard_log = "./tensorboard_self_minus_oppo_rad_{}_reward_shaping_{}_log/".format(data_aug_name, reward_shaping)
+        # model.verbose = 1
+        # model.nminibatches = 4
+        # model.learning_rate = 5e-4
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
@@ -382,10 +384,10 @@ def train_rad(data_aug_name, reward_shaping=False):
         print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
         # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
-        model.learn(total_timesteps=3000000, callback=CallbackList([checkpoint_callback]),
-                    tb_log_name='PPO2')  # 10M
+        model.learn(total_timesteps=6000000, callback=CallbackList([checkpoint_callback]),
+                    tb_log_name='PPO2')  # 6M
 
-        model.save("./saved_models/self_minus_oppo_rad_{}_reward_shaping_{}".format(data_aug_name, reward_shaping))
+        model.save("./saved_models/train_graph_rad_{}_reward_shape_{}_6M".format(data_aug_name, reward_shaping))
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
@@ -711,17 +713,17 @@ if __name__ == '__main__':
     # train_rad('cutout_color')
     # train_rad('color_jitter')
 
-    # import argparse
-    #
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--data_aug", type=str, help="")
-    # parser.add_argument("--reward_shaping", action="store_true")
-    # args = parser.parse_args()
-    #
-    # train_rad(args.data_aug, args.reward_shaping)
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_aug", type=str, help="")
+    parser.add_argument("--reward_shaping", action="store_true")
+    args = parser.parse_args()
+
+    train_rad(args.data_aug, args.reward_shaping)
 
     # train_randomnet()
 
     # generate paper RL training graph
     # run_train()
-    train_speed_mixed()
+    # train_speed_mixed()
