@@ -205,17 +205,61 @@ class GenerativeRewardClassifier(DataLoader):
         # we want a simple linear decision rules (optimal decision rules based on the feature)
         # this way, things are explanable (feedback can be provided)
         # the trajectory is also stored in there
+        
+        # for now we don't treat this as a feature...even though we could
 
         self.correct_program_to_rewards, self.broken_program_to_rewards \
             , self.correct_program_to_info, self.broken_program_to_info \
             , self.correct_rewards, self.broken_rewards = extract_reference_program_data_from_dir(train_correct_folder,
                                                                                                   train_broken_folder)
 
-        self.cls = KernelDensity(kernel='gaussian', bandwidth=bandwidth)
+        self.density = KernelDensity(kernel='gaussian', bandwidth=bandwidth)
+        self.cls = sklearn.linear_model.LogisticRegression()
 
-    def train(self):
+    def train(self, filter_negative=False, filter_threshold=0, verbose=True):
         # we only fit on correct rewards
-        pass
+        filtered_rewards = self.correct_rewards
+        if filter_negative:
+            filtered_rewards = [r for r in self.correct_rewards if r > filter_threshold]
+            
+        filtered_rewards = np.array(filtered_rewards).reshape(-1, 1)
+        self.density.fit(filtered_rewards)
+        print(filtered_rewards)
+        
+        # then we find the optimal threshold
+        # we implicitly use a linear classifier for this...
+        # we return the threshold and set internally
+        
+        X, y = self.prepare_flat_data_from_json(self.correct_program_to_info, self.broken_program_to_info,
+                                               feature_extractor=TotalRewardFeatureExtractor, return_numpy=True)
+        
+        feat_X = self.density.score_samples(X)
+        self.cls.fit(feat_X.reshape(-1, 1), y)
+        
+        if verbose:
+            y_hat = self.cls.predict(feat_X.reshape(-1, 1))
+            print(sklearn.metrics.classification_report(y, y_hat, digits=3))
+            print("Boundary threshold:", self.cls.coef_[0][0])
+            
+        self.threshold = self.cls.coef_[0][0]
+            
+    def evaluate(self, folder_dirs, verbose=True):
+        assert type(folder_dirs) == list
+        X, y = [], []
+        for folder_dir in folder_dirs:
+            _, _, correct_program_to_info, broken_program_to_info, _, _ = extract_evaluation_program_data(folder_dir)
+            new_X, new_y = self.prepare_flat_data_from_json(correct_program_to_info, broken_program_to_info,
+                                                           feature_extractor=TotalRewardFeatureExtractor, return_numpy=False)
+            X.extend(new_X)
+            y.extend(new_y)
+
+        X, y = np.array(X).reshape(-1, 1), np.array(y)
+
+        X_feat = self.density.score_samples(X)
+        y_hat = self.cls.predict(X_feat.reshape(-1, 1))
+        
+        if verbose:
+            print(sklearn.metrics.classification_report(y, y_hat, digits=3))
 
 
 class KLDistanceClassifier(DataLoader):
