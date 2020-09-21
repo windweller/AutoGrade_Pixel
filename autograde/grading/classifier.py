@@ -13,13 +13,74 @@ class FeatureExtractor(object):
         # since each program we have, have 8 observations, we need something to aggregate
         raise NotImplementedError
 
-class Trainable(object):
-    def __init__(self):
-        self.trained = False
+class DataLoader(object):
+    def prepare_flat_data_from_json(self, correct_program_to_info, broken_program_to_info, return_numpy,
+                                   feature_extractor):
+        # This is used for training
+        # correct = 1, incorrect = 0
+        # if return numpy, we return numpy array, otherwise we return a list
+        # TODO: extend this to return expected reward as well
+        X, y = [], []
+        for _, data in correct_program_to_info.items():
+            # data['step_rewards']: (1, 1000, 8) Shape
+            np_data = np.array(data['step_rewards'])
+            for round_idx in range(np_data.shape[0]):
+                raw_x = np_data[round_idx, :, :].T
+                for obs_index in range(raw_x.shape[0]):
+                    X.append(feature_extractor.process_single(raw_x[obs_index, :]))
+                    y.append(1)
+        
+        for _, data in broken_program_to_info.items():
+            # data['step_rewards']: (1, 1000, 8) Shape
+            np_data = np.array(data['step_rewards'])
+            for round_idx in range(np_data.shape[0]):
+                raw_x = np_data[round_idx, :, :].T
+                for obs_index in range(raw_x.shape[0]):
+                    X.append(feature_extractor.process_single(raw_x[obs_index, :]))
+                    y.append(0)
 
-    def train(self, parameter_list):
-        # some feature extractors need to be trained
-        raise NotImplementedError
+        if return_numpy:
+            # this reshape is for sklearn
+            return np.array(X).reshape(-1, 1), np.array(y)
+        else:
+            return X, y
+    
+    def prepare_program_level_data_from_json(self, correct_program_to_info, broken_program_to_info,
+                                            feature_extractor, return_numpy):
+        # return will be Numpy, shape: [N_observation, Traj of observed reward]
+        # not sure if we want to add feature extractor here or elsewhere
+        X, y = [], []
+        for _, data in correct_program_to_info.items():
+            # data['step_rewards']: (1, 1000, 8) Shape
+            np_data = np.array(data['step_rewards'])
+            np_data = np_data.transpose(0,2,1)
+            last_dim = np_data.shape[-1]
+            np_data = np_data.reshape(-1, last_dim)  # (2, 8, 1000) -> (16, 1000)
+            
+            Xs = []
+            for obs_index in range(np_data.shape[0]):
+                Xs.append(feature_extractor.process_single(np_data[obs_index, :]))
+            
+            X.append(Xs)
+            y.append(1)
+        
+        for _, data in broken_program_to_info.items():
+            # data['step_rewards']: (1, 1000, 8) Shape
+            np_data = np.array(data['step_rewards'])
+            np_data = np_data.transpose(0,2,1)
+            last_dim = np_data.shape[-1]
+            np_data = np_data.reshape(-1, last_dim)  # (2, 8, 1000) -> (16, 1000)
+            
+            Xs = []
+            for obs_index in range(np_data.shape[0]):
+                Xs.append(feature_extractor.process_single(np_data[obs_index, :]))
+            X.append(Xs)
+            y.append(0)
+        
+        if return_numpy:
+            return np.array(X), np.array(y)
+        else:
+            return X, y
 
 class TotalRewardFeatureExtractor(FeatureExtractor):
     @staticmethod
@@ -30,7 +91,7 @@ class TotalRewardFeatureExtractor(FeatureExtractor):
         total_reward = data.sum(axis=0)
         return total_reward
 
-class TotalRewardClassifier(object):
+class TotalRewardClassifier(DataLoader):
     def __init__(self, train_correct_folder="./reference_eval_reward_value_stats_correct_programs_8_theme_15_speed/", 
                 train_broken_folder="./reference_eval_reward_value_stats_broken_10_programs_2rounds/", cls_type=sklearn.linear_model.LogisticRegression):
         # we want a simple linear decision rules (optimal decision rules based on the feature)
@@ -44,11 +105,14 @@ class TotalRewardClassifier(object):
         self.cls = cls_type()
         
         # total reward
-        self.X, self.y = self.prepare_data_from_json(self.correct_program_to_info, self.broken_program_to_info)
+        self.X, self.y = self.prepare_flat_data_from_json(self.correct_program_to_info, self.broken_program_to_info)
     
-    def prepare_data_from_json(self, correct_program_to_info, broken_program_to_info, return_numpy=True):
+    def prepare_flat_data_from_json(self, correct_program_to_info, broken_program_to_info, return_numpy=True,
+                                   feature_extractor=TotalRewardFeatureExtractor):
+        # This is used for training
         # correct = 1, incorrect = 0
         # if return numpy, we return numpy array, otherwise we return a list
+        # TODO: extend this to return expected reward as well
         X, y = [], []
         for _, data in correct_program_to_info.items():
             # data['step_rewards']: (1, 1000, 8) Shape
@@ -56,7 +120,7 @@ class TotalRewardClassifier(object):
             for round_idx in range(np_data.shape[0]):
                 raw_x = np_data[round_idx, :, :].T
                 for obs_index in range(raw_x.shape[0]):
-                    X.append(TotalRewardFeatureExtractor.process_single(raw_x[obs_index, :]))
+                    X.append(feature_extractor.process_single(raw_x[obs_index, :]))
                     y.append(1)
         
         for _, data in broken_program_to_info.items():
@@ -65,11 +129,49 @@ class TotalRewardClassifier(object):
             for round_idx in range(np_data.shape[0]):
                 raw_x = np_data[round_idx, :, :].T
                 for obs_index in range(raw_x.shape[0]):
-                    X.append(TotalRewardFeatureExtractor.process_single(raw_x[obs_index, :]))
+                    X.append(feature_extractor.process_single(raw_x[obs_index, :]))
                     y.append(0)
 
         if return_numpy:
+            # this reshape is for sklearn
             return np.array(X).reshape(-1, 1), np.array(y)
+        else:
+            return X, y
+        
+    def prepare_program_level_data_from_json(self, correct_program_to_info, broken_program_to_info,
+                                            feature_extractor=TotalRewardFeatureExtractor, return_numpy=True):
+        # return will be Numpy, shape: [N_observation, Traj of observed reward]
+        # not sure if we want to add feature extractor here or elsewhere
+        X, y = [], []
+        for _, data in correct_program_to_info.items():
+            # data['step_rewards']: (1, 1000, 8) Shape
+            np_data = np.array(data['step_rewards'])
+            np_data = np_data.transpose(0,2,1)
+            last_dim = np_data.shape[-1]
+            np_data = np_data.reshape(-1, last_dim)  # (2, 8, 1000) -> (16, 1000)
+            
+            Xs = []
+            for obs_index in range(np_data.shape[0]):
+                Xs.append(feature_extractor.process_single(np_data[obs_index, :]))
+            
+            X.append(Xs)
+            y.append(1)
+        
+        for _, data in broken_program_to_info.items():
+            # data['step_rewards']: (1, 1000, 8) Shape
+            np_data = np.array(data['step_rewards'])
+            np_data = np_data.transpose(0,2,1)
+            last_dim = np_data.shape[-1]
+            np_data = np_data.reshape(-1, last_dim)  # (2, 8, 1000) -> (16, 1000)
+            
+            Xs = []
+            for obs_index in range(np_data.shape[0]):
+                Xs.append(feature_extractor.process_single(np_data[obs_index, :]))
+            X.append(Xs)
+            y.append(0)
+        
+        if return_numpy:
+            return np.array(X), np.array(y)
         else:
             return X, y
     
@@ -95,21 +197,49 @@ class TotalRewardClassifier(object):
         self.cls = self.cls.fit(X, y)
         if verbose:
             y_hat = self.cls.predict(X)
-            print(sklearn.metrics.classification_report(y, y_hat))
+            print(sklearn.metrics.classification_report(y, y_hat, digits=3))
         
-    def evaluate(self, folder_dirs):
+    def evaluate(self, folder_dirs, verbose=True):
         assert type(folder_dirs) == list
         X, y = [], []
         for folder_dir in folder_dirs:
             _, _, correct_program_to_info, broken_program_to_info, _, _ = extract_evaluation_program_data(folder_dir)
-            new_X, new_y = self.prepare_data_from_json(correct_program_to_info, broken_program_to_info)
+            new_X, new_y = self.prepare_flat_data_from_json(correct_program_to_info, broken_program_to_info)
             X.extend(new_X)
             y.extend(new_y)
             
         X, y = np.array(X).reshape(-1, 1), np.array(y)
         
         y_hat = self.cls.predict(X)
-        print(sklearn.metrics.classification_report(y, y_hat))
+        if verbose:
+            print(sklearn.metrics.classification_report(y, y_hat, digits=3))
+            
+    def evaluate_program_level(self, folder_dirs, verbose=True):
+        # TODO: add program-level evaluation. What do I need for that? Just evaluate program-level?
+        assert type(folder_dirs) == list
+        X, y = [], []
+        for folder_dir in folder_dirs:
+            _, _, correct_program_to_info, broken_program_to_info, _, _ = extract_evaluation_program_data(folder_dir)
+            # new preprocess that maps to X: [N, N_observ], with a loop run each [N_observ, 1], and average result
+            new_X, new_y = self.prepare_program_level_data_from_json(correct_program_to_info, broken_program_to_info, return_numpy=True)
+            # (1000, 8)
+            X.append(new_X)
+            y.extend(new_y.tolist())
+            
+        X = np.vstack(X)
+        y = np.array(y)
+        # Now it's (8000, 8)
+        # we run classifier over
+        
+        N, t = X.shape[0], X.shape[1]
+        
+        X_feat = X.reshape(-1, 1)
+        y_hat = self.cls.predict(X_feat)
+        y_result = y_hat.reshape(N, t)
+        
+        # still just compute mean here
+        y_pred = y_result.mean(axis=1) > 0.5
+        print(sklearn.metrics.classification_report(y, y_pred, digits=3))
 
 class AnomalyFeatureClassifier(object):
     # Will write this one later...
