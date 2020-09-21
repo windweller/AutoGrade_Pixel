@@ -3,7 +3,7 @@ from sklearn.neighbors import KernelDensity
 
 import numpy as np
 
-from .load_utils import extract_reference_program_data_from_dir, extract_evaluation_program_data
+from load_utils import extract_reference_program_data_from_dir, extract_evaluation_program_data
 
 
 class FeatureExtractor(object):
