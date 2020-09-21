@@ -169,7 +169,6 @@ class TotalRewardClassifier(DataLoader):
             print(sklearn.metrics.classification_report(y, y_hat, digits=3))
 
     def evaluate_program_level(self, folder_dirs, verbose=True):
-        # TODO: add program-level evaluation. What do I need for that? Just evaluate program-level?
         assert type(folder_dirs) == list
         X, y = [], []
         for folder_dir in folder_dirs:
@@ -260,6 +259,34 @@ class GenerativeRewardClassifier(DataLoader):
         
         if verbose:
             print(sklearn.metrics.classification_report(y, y_hat, digits=3))
+
+    def evaluate_program_level(self, folder_dirs, verbose=True):
+        assert type(folder_dirs) == list
+        X, y = [], []
+        for folder_dir in folder_dirs:
+            _, _, correct_program_to_info, broken_program_to_info, _, _ = extract_evaluation_program_data(folder_dir)
+            # new preprocess that maps to X: [N, N_observ], with a loop run each [N_observ, 1], and average result
+            new_X, new_y = self.prepare_program_level_data_from_json(correct_program_to_info, broken_program_to_info,
+                                                                     return_numpy=True, feature_extractor=TotalRewardFeatureExtractor)
+            # (1000, 8)
+            X.append(new_X)
+            y.extend(new_y.tolist())
+
+        X = np.vstack(X)
+        y = np.array(y)
+        # Now it's (8000, 8)
+        # we run classifier over
+
+        N, t = X.shape[0], X.shape[1]
+
+        X_feat = X.reshape(-1, 1)
+        X_feat = self.density.score_samples(X_feat)
+        y_hat = self.cls.predict(X_feat.reshape(-1, 1))
+        y_result = y_hat.reshape(N, t)
+
+        # still just compute mean here
+        y_pred = y_result.mean(axis=1) > 0.5
+        print(sklearn.metrics.classification_report(y, y_pred, digits=3))
 
 
 class KLDistanceClassifier(DataLoader):
