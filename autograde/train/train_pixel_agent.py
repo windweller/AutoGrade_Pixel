@@ -561,6 +561,7 @@ def run_train():
     # train standard or mixed-theme start...for the training graph
     parser = argparse.ArgumentParser()
     parser.add_argument("--curriculum", action="store_true")
+    parser.add_argument("--n_steps", type=int, default=256, help="We think longer steps lead to better speed generalization")
     args = parser.parse_args()
     # standard mixed-theme vs. curriculum mixed-theme
     # 6M vs. 3M + 3M
@@ -584,7 +585,7 @@ def run_train():
 
     with tf.Session(config=config):
         checkpoint_callback = CheckpointCallback(save_freq=250000,
-                                                 save_path="./saved_models/paper_train_graph_mixed_{}/".format(name),
+                                                 save_path="./saved_models/paper_train_graph_mixed_{}_steps_{}/".format(name, args.n_steps),
                                                  name_prefix="ppo2_cnn_lstm_default")
 
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=1,
@@ -594,7 +595,7 @@ def run_train():
         if args.curriculum:
             model = PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
             model.set_env(env)
-            model.tensorboard_log = "./tensorboard_paper_train_graph_mixed_curriculum_3M_log/"
+            model.tensorboard_log = "./tensorboard_paper_train_graph_mixed_curriculum_3M_steps_{}_log/".format(args.n_steps)
             model.verbose = 1
             model.nminibatches = 4
             model.learning_rate = 5e-4
@@ -602,8 +603,8 @@ def run_train():
             steps = 3000000
             save_name = 'curriculum'
         else:
-            model = PPO2('CnnLstmPolicy', env, n_steps=256, learning_rate=5e-4, gamma=0.99,
-                         verbose=1, nminibatches=4, tensorboard_log="./tensorboard_paper_train_graph_mixed_standard_6M_log/")
+            model = PPO2('CnnLstmPolicy', env, n_steps=args.n_steps, learning_rate=5e-4, gamma=0.99,
+                         verbose=1, nminibatches=4, tensorboard_log="./tensorboard_paper_train_graph_mixed_standard_6M_{}_log/".format(args.n_steps))
             steps = 6000000
             save_name = 'standard'
 
@@ -619,7 +620,7 @@ def run_train():
         model.learn(total_timesteps=steps, callback=CallbackList([checkpoint_callback]),
                     tb_log_name='PPO2')  # 3M
 
-        model.save("./saved_models/paper_train_graph_mixed_{}".format(save_name))
+        model.save("./saved_models/paper_train_graph_mixed_{}_steps_{}".format(save_name, args.n_steps))
 
         # single_env = make_general_env(program, 4, 1, ONLY_SELF_SCORE)
         # recurrent policy, no stacking!
@@ -635,6 +636,7 @@ def run_train():
         env.close()
 
 def train_normal_6M():
+    # This somehow didn't work??? Why?
     import wandb
 
     name = "standard"
