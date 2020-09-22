@@ -112,36 +112,9 @@ def evaluate_on_tail():
 
     start = time.time()
 
+    # we filter on files we already generated...
+
     prog = 0
-    for uniq_program_loc in tqdm(
-            glob.glob(pjoin(program_folder, "1000_sampled_tail_uniq_programs", "correct", "*.json"))):
-        try:
-            # sometimes certain prorams are not executable
-            avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8,
-                                                                                          return_stats=True)
-            rew_str = ",".join([str(r) for r in rewards]) + '\n'
-            f = open(save_stats_dir + 'correct_{}_rewards.txt'.format(uniq_program_loc.split('/')[-1].rstrip(".json")),
-                     'w')
-            f.write(rew_str)
-            f.close()
-            # save other stats
-            filename = save_stats_dir + 'correct_{}_info.json'.format(uniq_program_loc.split('/')[-1].rstrip(".json"))
-            f = open(filename, 'w')
-            json.dump({'step_rewards': step_rewards,
-                       'step_values': step_values,
-                       'step_dones': step_dones}, f)
-            f.close()
-        except:
-            pass
-
-        prog += 1
-        time_so_far = time.time() - start
-        time_per_program = time_so_far / prog
-        estimated_time_to_complete = time_per_program * (1000 - prog)
-
-        wandb.log({"Estimated Time to Complete (secs)": estimated_time_to_complete,
-                   "Estimated Time to Complete (min)": estimated_time_to_complete / 60,
-                   "Spent time (secs)": time_so_far})
 
     for uniq_program_loc in tqdm(
             glob.glob(pjoin(program_folder, "1000_sampled_tail_uniq_programs", "broken", "*.json"))):
@@ -173,6 +146,36 @@ def evaluate_on_tail():
         wandb.log({"Estimated Time to Complete (secs)": estimated_time_to_complete,
                    "Estimated Time to Complete (min)": estimated_time_to_complete / 60,
                    "Spent time (secs)": time_so_far})
+
+    # for uniq_program_loc in tqdm(
+    #         glob.glob(pjoin(program_folder, "1000_sampled_tail_uniq_programs", "correct", "*.json"))):
+    #     try:
+    #         # sometimes certain prorams are not executable
+    #         avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8,
+    #                                                                                       return_stats=True)
+    #         rew_str = ",".join([str(r) for r in rewards]) + '\n'
+    #         f = open(save_stats_dir + 'correct_{}_rewards.txt'.format(uniq_program_loc.split('/')[-1].rstrip(".json")),
+    #                  'w')
+    #         f.write(rew_str)
+    #         f.close()
+    #         # save other stats
+    #         filename = save_stats_dir + 'correct_{}_info.json'.format(uniq_program_loc.split('/')[-1].rstrip(".json"))
+    #         f = open(filename, 'w')
+    #         json.dump({'step_rewards': step_rewards,
+    #                    'step_values': step_values,
+    #                    'step_dones': step_dones}, f)
+    #         f.close()
+    #     except:
+    #         pass
+    #
+    #     prog += 1
+    #     time_so_far = time.time() - start
+    #     time_per_program = time_so_far / prog
+    #     estimated_time_to_complete = time_per_program * (1000 - prog)
+    #
+    #     wandb.log({"Estimated Time to Complete (secs)": estimated_time_to_complete,
+    #                "Estimated Time to Complete (min)": estimated_time_to_complete / 60,
+    #                "Spent time (secs)": time_so_far})
 
     print("Time took {} secs".format(time.time() - start))
 
@@ -345,5 +348,5 @@ if __name__ == '__main__':
     pass
     # run_evaluate_on_rewards_and_values()
     # gen_traj_for_correct_program_rewards_and_values()
-    gen_traj_for_reference_broken_program_rewards_and_values()
-    # evaluate_on_tail()
+    # gen_traj_for_reference_broken_program_rewards_and_values()
+    evaluate_on_tail()
