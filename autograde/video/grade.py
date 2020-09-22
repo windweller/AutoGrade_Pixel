@@ -115,20 +115,24 @@ def evaluate_on_tail():
     prog = 0
     for uniq_program_loc in tqdm(
             glob.glob(pjoin(program_folder, "1000_sampled_tail_uniq_programs", "correct", "*.json"))):
-        avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8,
-                                                                                      return_stats=True)
-        rew_str = ",".join([str(r) for r in rewards]) + '\n'
-        f = open(save_stats_dir + 'correct_{}_rewards.txt'.format(uniq_program_loc.split('/')[-1].rstrip(".json")),
-                 'w')
-        f.write(rew_str)
-        f.close()
-        # save other stats
-        filename = save_stats_dir + 'correct_{}_info.json'.format(uniq_program_loc.split('/')[-1].rstrip(".json"))
-        f = open(filename, 'w')
-        json.dump({'step_rewards': step_rewards,
-                   'step_values': step_values,
-                   'step_dones': step_dones}, f)
-        f.close()
+        try:
+            # sometimes certain prorams are not executable
+            avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8,
+                                                                                          return_stats=True)
+            rew_str = ",".join([str(r) for r in rewards]) + '\n'
+            f = open(save_stats_dir + 'correct_{}_rewards.txt'.format(uniq_program_loc.split('/')[-1].rstrip(".json")),
+                     'w')
+            f.write(rew_str)
+            f.close()
+            # save other stats
+            filename = save_stats_dir + 'correct_{}_info.json'.format(uniq_program_loc.split('/')[-1].rstrip(".json"))
+            f = open(filename, 'w')
+            json.dump({'step_rewards': step_rewards,
+                       'step_values': step_values,
+                       'step_dones': step_dones}, f)
+            f.close()
+        except:
+            pass
 
         prog += 1
         time_so_far = time.time() - start
@@ -141,22 +145,25 @@ def evaluate_on_tail():
 
     for uniq_program_loc in tqdm(
             glob.glob(pjoin(program_folder, "1000_sampled_tail_uniq_programs", "broken", "*.json"))):
-        avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8,
-                                                                                      return_stats=True)
-        rew_str = ",".join([str(r) for r in rewards]) + '\n'
-        f = open(save_stats_dir + 'broken_{}_rewards.txt'.format(uniq_program_loc.split('/')[-1].rstrip(".json")),
-                 'w')
-        f.write(rew_str)
-        f.close()
-        # save other stats
-        filename = save_stats_dir + 'broken_{}_info.json'.format(uniq_program_loc.split('/')[-1].rstrip(".json"))
-        f = open(filename, 'w')
-        json.dump({'step_rewards': step_rewards,
-                   'step_values': step_values,
-                   'step_dones': step_dones}, f)
+        try:
+            avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8,
+                                                                                          return_stats=True)
+            rew_str = ",".join([str(r) for r in rewards]) + '\n'
+            f = open(save_stats_dir + 'broken_{}_rewards.txt'.format(uniq_program_loc.split('/')[-1].rstrip(".json")),
+                     'w')
+            f.write(rew_str)
+            f.close()
+            # save other stats
+            filename = save_stats_dir + 'broken_{}_info.json'.format(uniq_program_loc.split('/')[-1].rstrip(".json"))
+            f = open(filename, 'w')
+            json.dump({'step_rewards': step_rewards,
+                       'step_values': step_values,
+                       'step_dones': step_dones}, f)
 
-        # shape: (1, 1000, 8) -- if put in Numpy
-        f.close()
+            # shape: (1, 1000, 8) -- if put in Numpy
+            f.close()
+        except:
+            pass
 
         prog += 1
         time_so_far = time.time() - start
