@@ -14,6 +14,8 @@ class FeatureExtractor(object):
         # since each program we have, have 8 observations, we need something to aggregate
         raise NotImplementedError
 
+class TrajectoryDataLoader(object):
+    pass
 
 class DataLoader(object):
     def prepare_flat_data_from_json(self, correct_program_to_info, broken_program_to_info, return_numpy,
@@ -51,38 +53,42 @@ class DataLoader(object):
                                              feature_extractor, return_numpy):
         # return will be Numpy, shape: [N_observation, Traj of observed reward]
         # not sure if we want to add feature extractor here or elsewhere
-        X, y = [], []
+        Xs, ys = [], []
         for _, data in correct_program_to_info.items():
-            # data['step_rewards']: (1, 1000, 8) Shape
-            np_data = np.array(data['step_rewards'])
-            np_data = np_data.transpose(0, 2, 1)
-            last_dim = np_data.shape[-1]
-            np_data = np_data.reshape(-1, last_dim)  # (2, 8, 1000) -> (16, 1000)
+            step_rewards = np.array(data['step_rewards'])  # target
+            
+            step_rewards = np.array(step_rewards).transpose(0, 2, 1) # self.flatten_rounds(np.array(step_rewards))
+            # (repeated_times, 8_runs, 1000_traj)
+            
+            for i in range(step_rewards.shape[0]):
+                X, y = [], []
+                for round_idx in range(step_rewards.shape[1]):
+                    # slide window on both, and take the last element of the target
+                    X.append(feature_extractor.process_single(step_rewards[i, round_idx, :]))
+                    y.append(1)
 
-            Xs = []
-            for obs_index in range(np_data.shape[0]):
-                Xs.append(feature_extractor.process_single(np_data[obs_index, :]))
-
-            X.append(Xs)
-            y.append(1)
+                Xs.append(X)
+                ys.append(y)
 
         for _, data in broken_program_to_info.items():
-            # data['step_rewards']: (1, 1000, 8) Shape
-            np_data = np.array(data['step_rewards'])
-            np_data = np_data.transpose(0, 2, 1)
-            last_dim = np_data.shape[-1]
-            np_data = np_data.reshape(-1, last_dim)  # (2, 8, 1000) -> (16, 1000)
-
-            Xs = []
-            for obs_index in range(np_data.shape[0]):
-                Xs.append(feature_extractor.process_single(np_data[obs_index, :]))
-            X.append(Xs)
-            y.append(0)
-
+            step_rewards = np.array(data['step_rewards'])  # target
+            
+            step_rewards = np.array(step_rewards).transpose(0, 2, 1) # self.flatten_rounds(np.array(step_rewards))
+            
+            for i in range(step_rewards.shape[0]):
+                X, y = [], []
+                for round_idx in range(step_rewards.shape[1]):
+                    # slide window on both, and take the last element of the target
+                    X.append(feature_extractor.process_single(step_rewards[i, round_idx, :]))
+                    y.append(0)
+                
+                Xs.append(X)
+                ys.append(y)
+            
         if return_numpy:
-            return np.array(X), np.array(y)
-        else:
-            return X, y
+            return np.array(Xs, dtype=float), np.array(ys, dtype=int)
+
+        return Xs, ys
 
 
 class TotalRewardFeatureExtractor(FeatureExtractor):
@@ -124,10 +130,13 @@ class TotalRewardClassifier(DataLoader):
                                              feature_extractor=TotalRewardFeatureExtractor, return_numpy=True):
         # return will be Numpy, shape: [N_observation, Traj of observed reward]
         # not sure if we want to add feature extractor here or elsewhere
-        return super(TotalRewardClassifier, self).prepare_program_level_data_from_json(correct_program_to_info,
+        X, y = super(TotalRewardClassifier, self).prepare_program_level_data_from_json(correct_program_to_info,
                                                                                        broken_program_to_info,
                                                                                        feature_extractor=TotalRewardFeatureExtractor,
                                                                                        return_numpy=return_numpy)
+
+        y = y.mean(axis=-1)
+        return X, y
 
     def negative_filter(self, X, y):
         new_X, new_y = [], []
@@ -273,7 +282,7 @@ class GenerativeRewardClassifier(DataLoader):
             y.extend(new_y.tolist())
 
         X = np.vstack(X)
-        y = np.array(y)
+        y = np.array(y).mean(axis=-1)
         # Now it's (8000, 8)
         # we run classifier over
 
@@ -294,33 +303,23 @@ class KLDistanceClassifier(DataLoader):
     pass
 
 
-class AnomalyFeatureClassifier(object):
-    # Will write this one later...
-    def __init__(self, train_correct_folder="./reference_eval_reward_value_stats_correct_programs_8_theme_15_speed/",
-                 train_broken_folder="./reference_eval_reward_value_stats_broken_10_programs_2rounds/"):
-        # we want a simple linear decision rules (optimal decision rules based on the feature)
-        # this way, things are explanable (feedback can be provided)
-        # the trajectory is also stored in there
+class MarkovTrajMLP(DataLoader):
+    def __init__(self, order_n=5,
+                train_correct_folder="./reference_eval_reward_value_stats_correct_programs_8_theme_15_speed/",
+                train_broken_folder="./reference_eval_reward_value_stats_broken_10_programs_2rounds/"):
 
         self.correct_program_to_rewards, self.broken_program_to_rewards \
             , self.correct_program_to_info, self.broken_program_to_info \
             , self.correct_rewards, self.broken_rewards = extract_reference_program_data_from_dir(train_correct_folder,
                                                                                                   train_broken_folder)
 
-        pass
+import sklearn.neural_network
 
-    def train(self):
-        # we only train on training files
-        pass
-
-    def evaluate(self, parameter_list):
-        # we can evaluate on any folder
-        # it's this folder that needs to load in tons of trajectories
-        pass
-
-
-def run_reward_total():
-    pass
+# this is the best network (on par w/ random forest)
+def build_mlp():
+    # turn off L2 regularization
+    # L2 focuses on every feature...which is not what we want.
+    return sklearn.neural_network.MLPClassifier(activation='tanh', hidden_layer_sizes=(100,), max_iter=10000, alpha=0)
 
 
 if __name__ == "__main__":

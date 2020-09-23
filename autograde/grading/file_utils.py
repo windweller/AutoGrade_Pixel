@@ -24,5 +24,41 @@ def move_head_programs():
 
     print("Done!")
 
+def isolate_tail_500():
+    # before we have tail 1000
+    # now we just do 500
+    # 250 correct, 250 broken
+    all_files = os.listdir("./eval_reward_value_stats_1000_sampled_tail")
+    correct_src_IDs = set()
+    broken_src_IDs = set()
+    for f_n in all_files:
+        name = f_n.replace("_program_info.json", "").replace("_program_rewards.txt", "")
+        if 'broken' in name:
+            broken_src_IDs.add(name)
+        else:
+            correct_src_IDs.add(name)
+    
+    correct_src_IDs = list(correct_src_IDs)[:250]
+    broken_src_IDs = list(broken_src_IDs)[:250]
+
+    head_file_name_patterns = correct_src_IDs + broken_src_IDs
+
+    files_we_need = []
+    for f_n in all_files:
+        for pattern in head_file_name_patterns:
+            if pattern in f_n:
+                files_we_need.append(f_n)
+
+    os.makedirs("./eval_reward_value_stats_500_sampled_tail", exist_ok=True)
+    old_folder = "./eval_reward_value_stats_1000_sampled_tail/"
+    new_folder = "./eval_reward_value_stats_500_sampled_tail/"
+
+    for f_n in files_we_need:
+        shutil.copyfile(old_folder + f_n, new_folder + f_n)
+
+    print("Done!")
+
 if __name__ == "__main__":
-    move_head_programs()
+    pass
+    # move_head_programs()
+    isolate_tail_500()
