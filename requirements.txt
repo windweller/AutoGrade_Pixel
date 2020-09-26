@@ -1,6 +1,6 @@
 stable_baselines
 gym==0.14.0
-tensorflow==1.14.0
+tensorflow==1.15.4
 jupyterlab
 pymunk
 pygame
