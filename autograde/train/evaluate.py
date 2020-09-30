@@ -1022,7 +1022,7 @@ def eval_one_model_on_correct_programs(model, pbar, programs, save_dir):
     import json
 
     for name, program_json in programs:
-        episode_rewards, episode_lengths = get_full_performance(model, program_json, 5, 50, 5)
+        episode_rewards, episode_lengths = get_full_performance(model, program_json, 5, 0, 5)
         print(episode_rewards)
         print(episode_lengths)
         json.dump({'episode_rewards': episode_rewards,
