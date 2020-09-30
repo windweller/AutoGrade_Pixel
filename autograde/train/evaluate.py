@@ -678,7 +678,7 @@ def evaluate_rl_models_on_themes():
 
     pass
 
-def get_performance(model, json_obj, n_eval_episodes=10):
+def get_performance(model, json_obj, n_eval_episodes=10, finish_reward=100, num_ball_to_win=5):
     # This is 3-ball evaluation
 
     program = Program()
@@ -687,8 +687,8 @@ def get_performance(model, json_obj, n_eval_episodes=10):
     n_training_envs = 8  # originally training environments
 
     env = train_pixel_agent.make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False,
-                                             num_ball_to_win=5, max_steps=2000,
-                                             finish_reward=100)  # [-150, +200] 20 * 5 + 100 = 200
+                                             num_ball_to_win=num_ball_to_win, max_steps=2000,
+                                             finish_reward=finish_reward)  # [-150, +200] 20 * 5 + 100 = 200
 
     episode_rewards, episode_lengths = [], []
     for _ in range(n_eval_episodes):
@@ -971,6 +971,113 @@ def investigate2():
     print(num_ball)
 
 
+def get_full_performance(model, json_obj, n_eval_episodes=5, finish_reward=50, num_ball_to_win=5):
+    # This is 3-ball evaluation
+
+    program = Program()
+    program.loads(json_obj)
+
+    n_training_envs = 8  # originally training environments
+
+    env = train_pixel_agent.make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO, reward_shaping=False,
+                                             num_ball_to_win=num_ball_to_win, max_steps=2000,
+                                             finish_reward=finish_reward)  # [-150, +200] 20 * 5 + 100 = 200
+
+    episode_rewards, episode_lengths = [], []
+    for _ in range(n_eval_episodes):
+
+        obs = env.reset()
+        done, state = False, None
+        episode_reward = 0.0
+        episode_length = 0
+
+        zero_completed_obs = np.zeros((n_training_envs,) + env.observation_space.shape)
+        while not done:
+            # concatenate obs
+            # https://github.com/hill-a/stable-baselines/issues/166
+            zero_completed_obs[0, :] = obs
+
+            action, state = model.predict(zero_completed_obs, state=state, deterministic=True)
+            obs, reward, done, _info = env.step([action[0]])
+            episode_reward += reward
+            episode_length += 1
+
+        episode_rewards.append(episode_reward)
+        episode_lengths.append(episode_length)
+
+    # mean, low, high, h = mean_confidence_interval(episode_rewards)
+
+    # print("{} Performance under theme {}".format(model_name, setting))
+    # print("Average episode length: {}".format(np.mean(episode_lengths)))
+    # print("Mean reward: {}, CI: {}-{}, range: {}".format(mean, low[0], high[0], h[0]))
+    return episode_rewards, episode_lengths
+
+def eval_one_model_on_correct_programs(model, pbar, programs, save_dir):
+    from os.path import join as pjoin
+    import json
+
+    for name, program_json in programs:
+        episode_rewards, episode_lengths = get_full_performance(model, program_json, 5, 50, 5)
+        json.dump({'episode_rewards': episode_rewards,
+                   'episode_lengths':episode_lengths}, open(pjoin(save_dir, name), 'w'))
+        pbar.update(1)
+
+def get_model(model_name):
+    # dic = {
+    #     'Standard': PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip"),
+    #     'Mixed_Theme': PPO2.load("./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip"),
+    #     "RAD_Cutout": PPO2.load("saved_models/self_minus_oppo_rad_cutout.zip"),
+    #     "RAD_Cutout_Color": PPO2.load("saved_models/self_minus_oppo_rad_cutout_color.zip"),
+    #     "RAD_Color_Jitter": PPO2.load("saved_models/self_minus_oppo_rad_color_jitter.zip"),
+    #     "RAD_Gray_Scale": PPO2.load("saved_models/self_minus_oppo_rad_gray.zip")
+    # }
+
+    if model_name == 'Standard':
+        return PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
+    elif model_name == "Mixed_Theme":
+        return PPO2.load(
+            "./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+    elif model_name == "RAD_Cutout":
+        return PPO2.load("saved_models/self_minus_oppo_rad_cutout.zip")
+    elif model_name == "RAD_Cutout_Color":
+        return PPO2.load("saved_models/self_minus_oppo_rad_cutout_color.zip")
+    elif model_name == "RAD_Color_Jitter":
+        return PPO2.load("saved_models/self_minus_oppo_rad_color_jitter.zip")
+    elif model_name == "RAD_Gray_Scale":
+        return PPO2.load("saved_models/self_minus_oppo_rad_gray.zip")
+
+def evaluate_on_correct_programs():
+
+    from os.path import join as pjoin
+    import json
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--eval_folder", type=str, help="")
+    parser.add_argument("--model", type=str, help="")
+    args = parser.parse_args()
+
+    # we could use wandb to track progress
+    # let's wait for now and see how fast/slow it is
+
+    # load programs
+    root_dir = "/home/aimingnie/AutoGrade/autograde/envs/bounce_programs/"
+    program_dir = pjoin(root_dir, args.eval_folder)
+
+    program_jsons = []
+    for f_n in os.listdir(program_dir):
+        program_json = json.load(open(pjoin(program_dir, f_n)))
+        program_jsons.append((f_n, program_json))
+
+    pbar = tqdm(total=len(program_jsons))
+
+    save_dir = "/home/aimingnie/AutoGrade/{}_result".format(args.eval_folder)
+    os.makedirs(save_dir, exist_ok=True)
+
+    model = get_model(args.model)
+    eval_one_model_on_correct_programs(model, pbar, program_jsons, save_dir)
+
+
 if __name__ == '__main__':
     pass
     # evaluate()
@@ -996,7 +1103,7 @@ if __name__ == '__main__':
     # generate_a_few_speed_table()
 
     # evaluate_rl_models_on_themes()
-    evaluate_rl_models_on_themes()
+    # evaluate_rl_models_on_themes()
 
     # generate_result_table1()
     # investigate()
@@ -1004,3 +1111,5 @@ if __name__ == '__main__':
     # generate_result_table2()
 
     # investigate2()
+
+    evaluate_on_correct_programs()
