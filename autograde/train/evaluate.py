@@ -846,8 +846,11 @@ def generate_result_table2():
     # while you generate, you should save traj them too.
     pbar = tqdm(total=25)
 
-    curriculum_model = PPO2.load(
-        "./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+    # curriculum_model = PPO2.load(
+    #     "./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+
+    # model = PPO2.load("./saved_models/paper_mixed_theme_continue_mixed_ball_speed_paddle_slow.zip")
+    model = PPO2.load("./saved_models/paper_mixed_theme_continue_mixed_ball_speed_paddle_very_slow.zip")
 
     rows = []
 
@@ -860,14 +863,16 @@ def generate_result_table2():
         row = []
         for ball_speed in choices:
             program_json = setup_speed_json_string(ball_speed, paddle_speed)
-            mean, r = get_performance(curriculum_model, program_json, 10)
+            mean, r = get_performance(model, program_json, 10)
             row.append("{:.1f} $\pm$ {:.1f}".format(mean, r))
             pbar.update(1)
 
         rows.append([paddle_speed] + row)
 
     import csv
-    file = open("./speed_invariance_curriculum_model_eval.csv", 'w')
+    # file = open("./speed_invariance_curriculum_model_eval.csv", 'w')
+    # file = open("./speed_invariance_mixed_theme_continue_mixed_ball_speed_paddle_slow_eval.csv", 'w')
+    file = open("./speed_invariance_paper_mixed_theme_continue_mixed_ball_speed_paddle_very_slow.csv", 'w')
     writer = csv.writer(file)
 
     for row in rows:
@@ -1108,7 +1113,7 @@ if __name__ == '__main__':
     # generate_result_table1()
     # investigate()
 
-    # generate_result_table2()
+    generate_result_table2()
 
     # investigate2()
 

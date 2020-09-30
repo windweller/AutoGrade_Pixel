@@ -569,7 +569,7 @@ def run_train():
     import wandb
     name = 'curriculum' if args.curriculum else "standard"
     wandb.init(sync_tensorboard=True, project="autograde-bounce",
-               name="paper_train_graph_mixed_{}".format(name))
+               name="paper_train_graph_mixed_{}_steps_{}".format(name, args.n_steps))
 
     import os
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
@@ -788,6 +788,6 @@ if __name__ == '__main__':
     # train_randomnet()
 
     # generate paper RL training graph
-    # run_train()
+    run_train()
     # train_speed_mixed()
-    train_normal_6M()
+    # train_normal_6M()
