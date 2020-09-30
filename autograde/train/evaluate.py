@@ -1023,6 +1023,8 @@ def eval_one_model_on_correct_programs(model, pbar, programs, save_dir):
 
     for name, program_json in programs:
         episode_rewards, episode_lengths = get_full_performance(model, program_json, 5, 50, 5)
+        print(episode_rewards)
+        print(episode_lengths)
         json.dump({'episode_rewards': episode_rewards,
                    'episode_lengths':episode_lengths}, open(pjoin(save_dir, name), 'w'))
         pbar.update(1)
@@ -1038,10 +1040,10 @@ def get_model(model_name):
     # }
 
     if model_name == 'Standard':
-        return PPO2.load("./saved_models/bounce_ppo2_cnn_lstm_one_ball/ppo2_cnn_lstm_default_final.zip")
+        return PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
     elif model_name == "Mixed_Theme":
         return PPO2.load(
-            "./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+            "./saved_models/paper_train_graph_mixed_standard.zip")
     elif model_name == "RAD_Cutout":
         return PPO2.load("saved_models/self_minus_oppo_rad_cutout.zip")
     elif model_name == "RAD_Cutout_Color":
@@ -1113,7 +1115,7 @@ if __name__ == '__main__':
     # generate_result_table1()
     # investigate()
 
-    generate_result_table2()
+    # generate_result_table2()
 
     # investigate2()
 
