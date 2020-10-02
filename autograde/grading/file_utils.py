@@ -24,6 +24,82 @@ def move_head_programs():
 
     print("Done!")
 
+def move_head_programs_json_files():
+    # we grab the files and 
+    head_file_name_patterns = ["srcID_{}_program".format(i) for i in range(100)]
+
+    all_correct_files = os.listdir("./autograde/envs/bounce_programs/1000_uniq_programs_skip_0/correct/")
+    all_broken_files = os.listdir("./autograde/envs/bounce_programs/1000_uniq_programs_skip_0/broken/")
+
+    correct_files_we_need, broken_files_we_need = [], []
+    for f_n in all_correct_files:
+        for pattern in head_file_name_patterns:
+            if pattern in f_n:
+                correct_files_we_need.append(f_n)
+
+    for f_n in all_broken_files:
+        for pattern in head_file_name_patterns:
+            if pattern in f_n:
+                broken_files_we_need.append(f_n)
+
+    old_folder = "./autograde/envs/bounce_programs/1000_uniq_programs_skip_0/correct/"
+    new_folder = "./autograde/envs/bounce_programs/100_uniq_programs_skip_0/correct/"
+    os.makedirs(new_folder, exist_ok=True)
+
+    for f_n in correct_files_we_need:
+        shutil.move(old_folder + f_n, new_folder + f_n)
+
+    old_folder = "./autograde/envs/bounce_programs/1000_uniq_programs_skip_0/broken/"
+    new_folder = "./autograde/envs/bounce_programs/100_uniq_programs_skip_0/broken/"
+    os.makedirs(new_folder, exist_ok=True)
+
+    for f_n in broken_files_we_need:
+        shutil.move(old_folder + f_n, new_folder + f_n)
+    
+def move_tail_500_programs():
+    all_files = os.listdir("./eval_reward_value_stats_500_sampled_tail")
+    correct_src_IDs = set()
+    broken_src_IDs = set()
+    for f_n in all_files:
+        # so the number can be "srcID_263276_"
+        # it won't get confused :)
+        name = f_n.replace("program_info.json", "").replace("program_rewards.txt", "")
+        if 'broken' in name:
+            broken_src_IDs.add(name.replace("broken_", ""))
+        else:
+            correct_src_IDs.add(name.replace("correct_", ""))
+    
+    all_correct_files = os.listdir("./autograde/envs/bounce_programs/1000_sampled_tail_uniq_programs/correct/")
+    all_broken_files = os.listdir("./autograde/envs/bounce_programs/1000_sampled_tail_uniq_programs/broken/")
+
+    correct_src_IDs = list(correct_src_IDs)[:250]
+    broken_src_IDs = list(broken_src_IDs)[:250]
+    
+    correct_files_we_need, broken_files_we_need = [], []
+    for f_n in all_correct_files:
+        for pattern in correct_src_IDs:
+            if pattern in f_n:
+                correct_files_we_need.append(f_n)
+
+    for f_n in all_broken_files:
+        for pattern in broken_src_IDs:
+            if pattern in f_n:
+                broken_files_we_need.append(f_n)
+
+    old_folder = "./autograde/envs/bounce_programs/1000_sampled_tail_uniq_programs/correct/"
+    new_folder = "./autograde/envs/bounce_programs/500_sampled_tail_uniq_programs/correct/"
+    os.makedirs(new_folder, exist_ok=True)
+
+    for f_n in correct_files_we_need:
+        shutil.move(old_folder + f_n, new_folder + f_n)
+
+    old_folder = "./autograde/envs/bounce_programs/1000_sampled_tail_uniq_programs/broken/"
+    new_folder = "./autograde/envs/bounce_programs/500_sampled_tail_uniq_programs/broken/"
+    os.makedirs(new_folder, exist_ok=True)
+
+    for f_n in broken_files_we_need:
+        shutil.move(old_folder + f_n, new_folder + f_n)
+
 def isolate_tail_500():
     # before we have tail 1000
     # now we just do 500
@@ -32,7 +108,7 @@ def isolate_tail_500():
     correct_src_IDs = set()
     broken_src_IDs = set()
     for f_n in all_files:
-        name = f_n.replace("_program_info.json", "").replace("_program_rewards.txt", "")
+        name = f_n.replace("program_info.json", "").replace("program_rewards.txt", "")
         if 'broken' in name:
             broken_src_IDs.add(name)
         else:
@@ -61,4 +137,6 @@ def isolate_tail_500():
 if __name__ == "__main__":
     pass
     # move_head_programs()
-    isolate_tail_500()
+    # isolate_tail_500()
+    # move_head_programs_json_files()
+    move_tail_500_programs()
