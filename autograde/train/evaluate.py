@@ -1004,7 +1004,7 @@ def get_full_performance(model, json_obj, n_eval_episodes=5, finish_reward=50, n
 
             action, state = model.predict(zero_completed_obs, state=state, deterministic=True)
             obs, reward, done, _info = env.step([action[0]])
-            episode_reward += reward
+            episode_reward += reward.item(0)
             episode_length += 1
 
         episode_rewards.append(episode_reward)
@@ -1022,11 +1022,14 @@ def eval_one_model_on_correct_programs(model, pbar, programs, save_dir):
     import json
 
     for name, program_json in programs:
-        episode_rewards, episode_lengths = get_full_performance(model, program_json, 5, 0, 5)
-        print(episode_rewards)
-        print(episode_lengths)
-        json.dump({'episode_rewards': episode_rewards,
-                   'episode_lengths':episode_lengths}, open(pjoin(save_dir, name), 'w'))
+        try:
+            episode_rewards, episode_lengths = get_full_performance(model, program_json, 10, 0, 5)
+            print(episode_rewards)
+            print(episode_lengths)
+            json.dump({'episode_rewards': episode_rewards,
+                    'episode_lengths':episode_lengths}, open(pjoin(save_dir, name), 'w'))
+        except:
+            pass
         pbar.update(1)
 
 def get_model(model_name):
@@ -1042,8 +1045,9 @@ def get_model(model_name):
     if model_name == 'Standard':
         return PPO2.load("./saved_models/ppo2_cnn_lstm_default_final.zip")
     elif model_name == "Mixed_Theme":
-        return PPO2.load(
-            "./saved_models/paper_train_graph_mixed_standard.zip")
+        # return PPO2.load(
+        #     "./saved_models/paper_train_graph_mixed_standard.zip")
+        return PPO2.load("./autograde/train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
     elif model_name == "RAD_Cutout":
         return PPO2.load("saved_models/self_minus_oppo_rad_cutout.zip")
     elif model_name == "RAD_Cutout_Color":
@@ -1076,9 +1080,12 @@ def evaluate_on_correct_programs():
         program_json = json.load(open(pjoin(program_dir, f_n)))
         program_jsons.append((f_n, program_json))
 
+    # remove 2 bad ones for one model
+    # program_jsons = program_jsons[:7] + program_jsons[11:]
+
     pbar = tqdm(total=len(program_jsons))
 
-    save_dir = "/home/aimingnie/AutoGrade/{}_result".format(args.eval_folder)
+    save_dir = "/home/aimingnie/AutoGrade/{}_result/{}".format(args.eval_folder, args.model)
     os.makedirs(save_dir, exist_ok=True)
 
     model = get_model(args.model)
