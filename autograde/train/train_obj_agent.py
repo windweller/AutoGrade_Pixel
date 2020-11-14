@@ -116,7 +116,7 @@ def train():
 
     import wandb
     wandb.init(sync_tensorboard=True, project="autograde-bounce",
-               name="self_minus_oppo_finish_reward_shaping_retrain4_n256",
+               name="obj_self_minus_oppo_n256",
                config=hyperparams)
 
     program = Program()
