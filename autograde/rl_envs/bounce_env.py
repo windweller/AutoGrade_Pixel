@@ -27,10 +27,10 @@ def define_observation_space(screen_height, screen_width):
                       shape=(screen_height, screen_width, 3), dtype=np.uint8)
 
 
-def define_physical_observation_space(shape=(3,)):
+def define_object_observation_space(shape):
+    # shape = (3,)
     # (x, y, direction)
     return spaces.Box(low=-np.inf, high=np.inf, shape=shape, dtype=np.float)
-
 
 class PyGamePixelEnv(object):
     def __init__(self, game):
@@ -412,6 +412,166 @@ class BouncePixelEnv(gym.Env):
         image_np_array = np.array(image)
         return image_np_array
 
+
+class BounceObjectEnv(gym.Env):
+    """
+    We return paddle, ball_left, ball_top, gate_left, gate_right position
+    """
+    metadata = {'render.modes': ['human', 'rgb_array']}
+
+    def __init__(self, program: Program, reward_type, reward_shaping=False, num_ball_to_win=5,
+                 finish_reward=100):
+
+        assert reward_type in {ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO}
+        self.reward_type = reward_type
+
+        os.environ['SDL_VIDEODRIVER'] = 'dummy'
+
+        self.num_envs = 1
+        self.viewer = None
+        self.reward_shaping = reward_shaping
+        self.num_ball_to_win = num_ball_to_win
+        self.finish_reward = finish_reward
+
+        self.prev_shaping = None
+
+        self.program = program
+
+        self.bounce = Bounce(program)
+        self.action_space = define_action_space(self.bounce.action_cmds)
+
+        self.state_size = 3 + 2 * self.bounce.ball_group.LIMIT
+        self.observation_space = define_object_observation_space(shape=(elf.state_size,))
+
+    def seed(self, seed=None):
+        return self.bounce.seed(seed)
+
+    def get_state(self):
+        # multi-ball
+        max_ball_num = self.bounce.ball_group.LIMIT
+        # [paddle_left, goal_left, goal_right, ball_1_left, ball_1_top, ball_2_left ...]
+        state = np.zeros(3 + 2 * max_ball_num)
+        state[0] = self.bounce.paddle.body.position[0]
+        state[1] = 100  # goal left's boundary
+        state[2] = 300  # goal right's boundary
+        cnt = 3
+        for ball_id, ball in self.bounce.ball_group.balls.items():
+            left, top = ball.body.position
+            state[cnt] = left
+            state[cnt+1] = top
+            cnt += 2
+        return state
+
+    def step(self, action):
+        """
+        Returns:
+            observation (object): agent's observation of the current environment
+            reward (float) : amount of reward returned after previous action
+            done (bool): whether the episode has ended, in which case further step() calls will return undefined results
+            info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
+        """
+        if action >= len(self.bounce.action_cmds):
+            raise Exception("Can't choose an action based on index {}".format(action))
+
+        prev_score = self.bounce.score_board.own
+        prev_oppo_score = self.bounce.score_board.opponent
+
+        # map action into key
+        action_key = self.bounce.action_cmds[action]
+
+        self.bounce.act(action_key)
+
+        score = self.bounce.score_board.own
+        oppo_score = self.bounce.score_board.opponent
+
+        score_diff = score - prev_score
+        oppo_score_diff = oppo_score - prev_oppo_score
+
+        done = False
+        if score == self.num_ball_to_win or oppo_score == self.num_ball_to_win:
+            done = True
+
+        # considering "discount", reward should be higher
+        # we can add reward shaping if necessary (through wrappers)
+        if self.reward_type == SELF_MINUS_HALF_OPPO:
+            reward = (score_diff - oppo_score_diff) * 20
+            reward = max(-10, reward)
+            # -10 vs. 20, we care more about goal than to catch the ball
+            # assert reward in {20, -10, 0}  # highest reward is 100
+        else:
+            reward = score_diff * 20  # we only care about sending the ball in; each ball in is 1 point
+            # full points: 100
+
+        # Win everything: 200
+        # Lose everything: -150
+        if done and score == self.num_ball_to_win:
+            reward += self.finish_reward  # 100  # + 120  (120 + 80 = 200)
+        elif done and oppo_score == self.num_ball_to_win:
+            reward -= self.finish_reward  # 100  # - 110 (-40 - 110 = -150)
+
+        # reward shaping
+        if self.reward_shaping:
+
+            # only tracking one ball's distance
+            ball_x, ball_y = self.bounce.ball_group.balls[0].body.position
+            paddle_x, paddle_y = self.bounce.paddle.body.position
+
+            shaping = - 100 * np.abs(ball_x - paddle_x) / 400
+
+            if self.prev_shaping is not None:
+                reward += shaping - self.prev_shaping
+
+            self.prev_shaping = shaping
+
+        # make reward a bit smaller...
+        # reward /= 10
+
+        return self.get_state(), reward, done, {"score": score, "oppo_score": oppo_score}
+
+    def reset(self):
+        # we take the shortcut -- re-create the instance
+        # TODO: currently seeding needs to happen after reset
+        # TODO: other ways seem to be worse...so do not consider it
+
+        # seeding needs to happen after the reset
+        self.bounce = Bounce(self.program)
+        self.prev_shaping = None
+
+        # the intitial state, except for paddle, should all be 0
+        # but to avoid the situation where paddle is not created..we do manual zeros
+        return np.zeros(self.state_size)
+
+    def render(self, mode='human'):
+        img = self.get_image()
+        if mode == 'rgb_array':
+            return img
+        elif mode == 'human':
+            from gym.envs.classic_control import rendering
+            if self.viewer is None:
+                self.viewer = rendering.SimpleImageViewer()
+            self.viewer.imshow(img)
+            return self.viewer.isopen
+
+    def render_obs(self, obs):
+        from gym.envs.classic_control import rendering
+        if self.viewer is None:
+            self.viewer = rendering.SimpleImageViewer()
+        self.viewer.imshow(obs)
+        return self.viewer.isopen
+
+    def close(self):
+        return
+
+    def get_image(self):
+        """
+        https://mail.python.org/pipermail/python-list/2006-August/371647.html
+        https://pillow.readthedocs.io/en/stable/reference/Image.html
+        :return:
+        """
+        image_str = pygame.image.tostring(self.bounce.screen, 'RGB')
+        image = PIL.Image.frombytes(mode='RGB', size=(screen_height, screen_width), data=image_str)
+        image_np_array = np.array(image)
+        return image_np_array
 
 def convert_np_to_video(frames_name, output_video_name):
     assert '.mp4' in output_video_name, "The format is mp4"

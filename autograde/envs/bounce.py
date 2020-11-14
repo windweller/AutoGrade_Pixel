@@ -1235,7 +1235,7 @@ class Bounce(object):
 if __name__ == '__main__':
     program = Program()
 
-    # program.set_correct()
+    program.set_correct()
     # program.set_correct_with_theme()
     # program.load("./bounce_programs/change_scene.json")
     # program.load("./bounce_programs/demo1.json")
@@ -1243,7 +1243,7 @@ if __name__ == '__main__':
     # program.load("./bounce_programs/speed_test.json")
     # program.load("./bounce_programs/mixed_theme_train.json")
     # program.load("./bounce_programs/empty.json")
-    program.load("./bounce_programs/broken_small/wall_not_bounce.json")
+    # program.load("./bounce_programs/broken_small/wall_not_bounce.json")
     app = Bounce(program)
     # app.seed(2222)
     # app.ball_group.get_new_ball_init()
