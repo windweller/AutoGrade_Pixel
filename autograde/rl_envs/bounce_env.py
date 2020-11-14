@@ -441,7 +441,7 @@ class BounceObjectEnv(gym.Env):
         self.action_space = define_action_space(self.bounce.action_cmds)
 
         self.state_size = 3 + 2 * self.bounce.ball_group.LIMIT
-        self.observation_space = define_object_observation_space(shape=(elf.state_size,))
+        self.observation_space = define_object_observation_space(shape=(self.state_size,))
 
     def seed(self, seed=None):
         return self.bounce.seed(seed)
