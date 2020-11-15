@@ -456,6 +456,9 @@ class BounceObjectEnv(gym.Env):
         state[2] = 300  # goal right's boundary
         cnt = 3
         for ball_id, ball in self.bounce.ball_group.balls.items():
+            # out of the 10 balls limit, we break out of the loop
+            if cnt >= len(self.bounce.ball_group.balls):
+                break
             left, top = ball.body.position
             state[cnt] = left
             state[cnt+1] = top
