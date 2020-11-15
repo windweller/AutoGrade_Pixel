@@ -628,9 +628,19 @@ class Paddle(AbstractGameObject):
         if theme_str != self.curr_theme:
             # need to load paddle's last position, destroy, then recreate it
             self.curr_theme = theme_str
-            curr_pos = self.get_pos()
-            self.destroy()
-            self.create(curr_pos)
+            pos = self.body.position
+
+            self.destroy_sprite()
+            self.sprite = self.create_sprite(pos)
+            self.all_sprites.add(self.sprite)
+
+            self.curr_theme = theme_str
+            # not destroying anything
+            # but replace the sprite
+            self.all_sprites.remove(self.sprite)
+
+            #self.destroy()
+            #self.create(curr_pos)
 
     def set_speed(self, new_speed):
         self.speed = speed_dict[new_speed]
@@ -721,6 +731,9 @@ class Paddle(AbstractGameObject):
         self.space.remove(self.shape.body, self.shape)
         self.all_sprites.remove(self.sprite)
         self.body, self.shape, self.sprite = None, None, None
+
+    def destroy_sprite(self):
+        self.all_sprites.remove(self.sprite)
 
     def sync_sprite(self):
         # remember that the paddle height and pymunk ball height aren't the same
