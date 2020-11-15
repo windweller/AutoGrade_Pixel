@@ -24,7 +24,12 @@ from autograde.video.build_dataset import RLController
 def evaluate_on_rewards_and_values(n, skip, obj):
     # this is play-to-grade reward collector
 
-    wandb.init(project="autograde-rollout", name="{}_uniq_programs_skip_{}".format(n, skip))
+    if not obj:
+        wandb_name = "{}_uniq_programs_skip_{}".format(n, skip)
+    else:
+        wandb_name = "obj_{}_uniq_programs_skip_{}".format(n, skip)
+
+    wandb.init(project="autograde-rollout", name=wandb_name)
 
     if not obj:
         model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
