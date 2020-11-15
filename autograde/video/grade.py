@@ -20,27 +20,37 @@ from collections import defaultdict
 
 from autograde.video.build_dataset import RLController
 
-def evaluate_on_rewards_and_values(n, skip):
+
+def evaluate_on_rewards_and_values(n, skip, obj):
     # this is play-to-grade reward collector
 
     wandb.init(project="autograde-rollout", name="{}_uniq_programs_skip_{}".format(n, skip))
 
-    model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
-                       "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+    if not obj:
+        model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
+                           "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+    else:
+        model_file = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256.zip"
 
-    rlc = RLController(model_file, n_train_env=8)
+
+    rlc = RLController(model_file, n_train_env=8, obj=obj)
 
     rlc.load_model()
 
     program_folder = pjoin(pathlib.Path(__file__).parent.parent.absolute(), "envs/bounce_programs")
 
-    save_stats_dir = './eval_reward_value_stats_n{}_skip{}/'.format(n, skip)
+    if not obj:
+        save_stats_dir = './eval_reward_value_stats_n{}_skip{}/'.format(n, skip)
+    else:
+        save_stats_dir = './eval_reward_value_stats_obj_n{}_skip{}/'.format(n, skip)
+
     os.makedirs(save_stats_dir, exist_ok=True)
 
     start = time.time()
 
     prog = 0
-    for uniq_program_loc in tqdm(glob.glob(pjoin(program_folder, "{}_uniq_programs_skip_{}".format(n, skip), "correct", "*.json"))):
+    for uniq_program_loc in tqdm(
+            glob.glob(pjoin(program_folder, "{}_uniq_programs_skip_{}".format(n, skip), "correct", "*.json"))):
         avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8,
                                                                                       return_stats=True)
         rew_str = ",".join([str(r) for r in rewards]) + '\n'
@@ -58,14 +68,14 @@ def evaluate_on_rewards_and_values(n, skip):
         prog += 1
         time_so_far = time.time() - start
         time_per_program = time_so_far / prog
-        estimated_time_to_complete = time_per_program * ((n-skip) - prog)
+        estimated_time_to_complete = time_per_program * ((n - skip) - prog)
 
-        wandb.log({"Estimated Time to Complete (secs)":estimated_time_to_complete,
+        wandb.log({"Estimated Time to Complete (secs)": estimated_time_to_complete,
                    "Estimated Time to Complete (min)": estimated_time_to_complete / 60,
                    "Spent time (secs)": time_so_far})
 
-
-    for uniq_program_loc in tqdm(glob.glob(pjoin(program_folder, "{}_uniq_programs_skip_{}".format(n, skip), "broken", "*.json"))):
+    for uniq_program_loc in tqdm(
+            glob.glob(pjoin(program_folder, "{}_uniq_programs_skip_{}".format(n, skip), "broken", "*.json"))):
         avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8,
                                                                                       return_stats=True)
         rew_str = ",".join([str(r) for r in rewards]) + '\n'
@@ -92,6 +102,7 @@ def evaluate_on_rewards_and_values(n, skip):
                    "Spent time (secs)": time_so_far})
 
     print("Time took {} secs".format(time.time() - start))
+
 
 def evaluate_on_tail():
     # we evaluate on sampled 1000 tail programs
@@ -179,6 +190,19 @@ def evaluate_on_tail():
 
     print("Time took {} secs".format(time.time() - start))
 
+
+def run_evaluate_on_rewards_and_values():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n", type=int, help="")
+    parser.add_argument("--skip", type=int, default=0)
+    parser.add_argument("--obj", action='store_true', help="whether to classify based on object attributes")
+    args = parser.parse_args()
+
+    evaluate_on_rewards_and_values(args.n, args.skip, args.obj)
+
+
 def setup_theme_json_string(scene, ball, paddle):
     from string import Template
 
@@ -194,6 +218,7 @@ def setup_theme_json_string(scene, ball, paddle):
             """)
 
     return random_program_str.substitute(scene=scene, ball=ball, paddle=paddle)
+
 
 def setup_speed_json_string(ball, paddle):
     from string import Template
@@ -211,15 +236,6 @@ def setup_speed_json_string(ball, paddle):
 
     return random_program_str.substitute(ball=ball, paddle=paddle)
 
-def run_evaluate_on_rewards_and_values():
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--n", type=int, help="")
-    parser.add_argument("--skip", type=int, default=0)
-    args = parser.parse_args()
-
-    evaluate_on_rewards_and_values(args.n, args.skip)
 
 def gen_traj_for_correct_program_rewards_and_values():
     # two things, one for themes (8 themes)
@@ -307,6 +323,7 @@ def gen_traj_for_correct_program_rewards_and_values():
 
     print("Totally took {} secs".format(time.time() - start))
 
+
 def gen_traj_for_reference_broken_program_rewards_and_values():
     # 10 broken programs
     # so need to run 8 * 3 times...to create a balanced dataset
@@ -326,7 +343,7 @@ def gen_traj_for_reference_broken_program_rewards_and_values():
     program_folder = pjoin(pathlib.Path(__file__).parent.parent.absolute(), "envs/bounce_programs/broken_small/")
 
     for uniq_program_loc in glob.glob(pjoin(program_folder, "*.json")):
-        avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8*2,  # 8 * 3
+        avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8 * 2,  # 8 * 3
                                                                                       return_stats=True)
         rew_str = ",".join([str(r) for r in rewards]) + '\n'
         f = open(save_stats_dir + 'broken_{}_rewards.txt'.format(uniq_program_loc.split('/')[-1].rstrip(".json")), 'w')

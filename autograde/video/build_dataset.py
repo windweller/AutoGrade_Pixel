@@ -25,12 +25,14 @@ from gym.wrappers.monitoring.video_recorder import ImageEncoder
 
 from autograde.rl_envs.bounce_env import BouncePixelEnv, Program, ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO
 from autograde.rl_envs.wrappers import ResizeFrame
-from autograde.train.train_pixel_agent import make_general_env
+from autograde.train.train_pixel_agent import make_general_env as pixel_make_general_env
+from autograde.train.train_obj_agent import make_general_env as obj_make_general_env
 
 import os
 
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
 os.environ['SDL_AUDIODRIVER'] = 'dsp'
+
 
 class GenerateVideoToy(object):
     # This is specifically designed for testing purposes
@@ -259,7 +261,7 @@ class BounceVideoSplitter(object):
 
     @staticmethod
     def crop(im, height, width):
-        # we are not call this method...in order to speed up
+        # we do not call this method...in order to speed up
         # im = Image.open(infile)
         imgwidth, imgheight = im.shape[0], im.shape[1]
         rows = np.int(imgheight / height)
@@ -276,9 +278,10 @@ class RLController(object):
     # We are just generating videos, no concern for anything else
     # Definitely no "splitting"
 
-    def __init__(self, model_file, n_train_env):
+    def __init__(self, model_file, n_train_env, obj=False):
         """
         :param n_train_env: this is set up during training time. PPO setting is 8.
+        :param obj: whether to extract object-based information
         """
         self.n_train_env = n_train_env
 
@@ -286,6 +289,7 @@ class RLController(object):
         self.model = None
 
         self.n_env = n_train_env
+        self.obj = obj
 
     def load_programs(self, folder):
         program_files = os.listdir(folder)
@@ -310,7 +314,7 @@ class RLController(object):
         program = Program()
         program.loads(program_json)
 
-        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=3,
+        env = pixel_make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=3,
                                max_steps=1500, finish_reward=100)
 
         env = VecVideoRecorder(env, "{}/{}".format(save_dir, program_label),
@@ -383,9 +387,13 @@ class RLController(object):
         # originally it was num_ball_to_win=3, max_steps=1500, finish_reward=? might be 100
 
         # 1500 might be better...3 balls should be ok
-        env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=3,
-                                   max_steps=1000,
-                                   finish_reward=100)  # [-130, 160]
+        if self.obj:
+            env = obj_make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=3,
+                                   max_steps=1000, finish_reward=100)
+        else:
+            env = pixel_make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=3,
+                                       max_steps=1000,
+                                       finish_reward=100)  # [-130, 160]
 
         record_rounds = num_evals // self.n_train_env
 

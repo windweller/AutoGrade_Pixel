@@ -734,6 +734,7 @@ class Goal(object):
 
         # top = pymunk.Segment(space.static_body, (100, screen_height + 2), (300, screen_height + 2), 2)
         top = pymunk.Segment(space.static_body, (-500, screen_height + 7), (500, screen_height + 7), 2)
+        # top = pymunk.Segment(space.static_body, (0, screen_height + 7), (500, screen_height + 7), 2)
         top.elasticity = 1.0
         top.collision_type = collision_types['goal']
 

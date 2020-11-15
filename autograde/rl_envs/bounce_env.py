@@ -538,7 +538,8 @@ class BounceObjectEnv(gym.Env):
         self.prev_shaping = None
 
         # the intitial state, except for paddle, should all be 0
-        # but to avoid the situation where paddle is not created..we do manual zeros
+        # this is not quite right, initial state should be given by the env
+        # but in the case, we'll let it slide
         return np.zeros(self.state_size)
 
     def render(self, mode='human'):
