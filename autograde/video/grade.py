@@ -37,7 +37,6 @@ def evaluate_on_rewards_and_values(n, skip, obj):
     else:
         model_file = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256.zip"
 
-
     rlc = RLController(model_file, n_train_env=8, obj=obj)
 
     rlc.load_model()
@@ -109,21 +108,26 @@ def evaluate_on_rewards_and_values(n, skip, obj):
     print("Time took {} secs".format(time.time() - start))
 
 
-def evaluate_on_tail():
+def evaluate_on_tail(obj):
     # we evaluate on sampled 1000 tail programs
 
-    wandb.init(project="autograde-rollout", name="1000_sampled_tail_uniq_programs")
+    wandb_name = "500_sampled_tail_uniq_programs" if not obj else "obj_500_sampled_tail_uniq_programs"
 
-    model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
-                       "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+    wandb.init(project="autograde-rollout", name=wandb_name)
 
-    rlc = RLController(model_file, n_train_env=8)
+    if not obj:
+        model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
+                           "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+    else:
+        model_file = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256.zip"
+
+    rlc = RLController(model_file, n_train_env=8, obj=obj)
 
     rlc.load_model()
 
     program_folder = pjoin(pathlib.Path(__file__).parent.parent.absolute(), "envs/bounce_programs")
 
-    save_stats_dir = './eval_reward_value_stats_1000_sampled_tail/'
+    save_stats_dir = './eval_reward_value_stats_500_sampled_tail/' if not obj else "eval_reward_value_stats_obj_500_sampled_tail"
     os.makedirs(save_stats_dir, exist_ok=True)
 
     start = time.time()
@@ -133,7 +137,7 @@ def evaluate_on_tail():
     prog = 0
 
     for uniq_program_loc in tqdm(
-            glob.glob(pjoin(program_folder, "1000_sampled_tail_uniq_programs", "broken", "*.json"))):
+            glob.glob(pjoin(program_folder, "500_sampled_tail_uniq_programs", "broken", "*.json"))):
         try:
             avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8,
                                                                                           return_stats=True)
@@ -163,35 +167,35 @@ def evaluate_on_tail():
                    "Estimated Time to Complete (min)": estimated_time_to_complete / 60,
                    "Spent time (secs)": time_so_far})
 
-    # for uniq_program_loc in tqdm(
-    #         glob.glob(pjoin(program_folder, "1000_sampled_tail_uniq_programs", "correct", "*.json"))):
-    #     try:
-    #         # sometimes certain prorams are not executable
-    #         avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8,
-    #                                                                                       return_stats=True)
-    #         rew_str = ",".join([str(r) for r in rewards]) + '\n'
-    #         f = open(save_stats_dir + 'correct_{}_rewards.txt'.format(uniq_program_loc.split('/')[-1].rstrip(".json")),
-    #                  'w')
-    #         f.write(rew_str)
-    #         f.close()
-    #         # save other stats
-    #         filename = save_stats_dir + 'correct_{}_info.json'.format(uniq_program_loc.split('/')[-1].rstrip(".json"))
-    #         f = open(filename, 'w')
-    #         json.dump({'step_rewards': step_rewards,
-    #                    'step_values': step_values,
-    #                    'step_dones': step_dones}, f)
-    #         f.close()
-    #     except:
-    #         pass
-    #
-    #     prog += 1
-    #     time_so_far = time.time() - start
-    #     time_per_program = time_so_far / prog
-    #     estimated_time_to_complete = time_per_program * (1000 - prog)
-    #
-    #     wandb.log({"Estimated Time to Complete (secs)": estimated_time_to_complete,
-    #                "Estimated Time to Complete (min)": estimated_time_to_complete / 60,
-    #                "Spent time (secs)": time_so_far})
+    for uniq_program_loc in tqdm(
+            glob.glob(pjoin(program_folder, "500_sampled_tail_uniq_programs", "correct", "*.json"))):
+        try:
+            # sometimes certain prorams are not executable
+            avg_reward, rewards, step_rewards, step_values, step_dones = rlc.play_program(uniq_program_loc, 8,
+                                                                                          return_stats=True)
+            rew_str = ",".join([str(r) for r in rewards]) + '\n'
+            f = open(save_stats_dir + 'correct_{}_rewards.txt'.format(uniq_program_loc.split('/')[-1].rstrip(".json")),
+                     'w')
+            f.write(rew_str)
+            f.close()
+            # save other stats
+            filename = save_stats_dir + 'correct_{}_info.json'.format(uniq_program_loc.split('/')[-1].rstrip(".json"))
+            f = open(filename, 'w')
+            json.dump({'step_rewards': step_rewards,
+                       'step_values': step_values,
+                       'step_dones': step_dones}, f)
+            f.close()
+        except:
+            pass
+
+        prog += 1
+        time_so_far = time.time() - start
+        time_per_program = time_so_far / prog
+        estimated_time_to_complete = time_per_program * (1000 - prog)
+
+        wandb.log({"Estimated Time to Complete (secs)": estimated_time_to_complete,
+                   "Estimated Time to Complete (min)": estimated_time_to_complete / 60,
+                   "Spent time (secs)": time_so_far})
 
     print("Time took {} secs".format(time.time() - start))
 
@@ -200,12 +204,16 @@ def run_evaluate_on_rewards_and_values():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n", type=int, help="")
+    parser.add_argument("--n", type=int, default=0, help="")
     parser.add_argument("--skip", type=int, default=0)
     parser.add_argument("--obj", action='store_true', help="whether to classify based on object attributes")
+    parser.add_argument("--tail", action='store_true', help="only evaluate on tail")
     args = parser.parse_args()
 
-    evaluate_on_rewards_and_values(args.n, args.skip, args.obj)
+    if args.tail:
+        evaluate_on_tail(args.obj)
+    else:
+        evaluate_on_rewards_and_values(args.n, args.skip, args.obj)
 
 
 def setup_theme_json_string(scene, ball, paddle):
