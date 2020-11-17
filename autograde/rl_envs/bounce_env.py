@@ -420,7 +420,7 @@ class BounceObjectEnv(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
 
     def __init__(self, program: Program, reward_type, reward_shaping=False, num_ball_to_win=5,
-                 finish_reward=100):
+                 finish_reward=100, no_neg_finish=False):
 
         assert reward_type in {ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO}
         self.reward_type = reward_type
@@ -432,6 +432,7 @@ class BounceObjectEnv(gym.Env):
         self.reward_shaping = reward_shaping
         self.num_ball_to_win = num_ball_to_win
         self.finish_reward = finish_reward
+        self.no_neg_finish = no_neg_finish
 
         self.prev_shaping = None
 
@@ -513,7 +514,8 @@ class BounceObjectEnv(gym.Env):
         if done and score == self.num_ball_to_win:
             reward += self.finish_reward  # 100  # + 120  (120 + 80 = 200)
         elif done and oppo_score == self.num_ball_to_win:
-            reward -= self.finish_reward  # 100  # - 110 (-40 - 110 = -150)
+            if not self.no_neg_finish:
+                reward -= self.finish_reward  # 100  # - 110 (-40 - 110 = -150)
 
         # reward shaping
         if self.reward_shaping:

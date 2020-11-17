@@ -16,11 +16,11 @@ from stable_baselines.common.callbacks import CallbackList, EvalCallback, Checkp
 from autograde.rl_envs.bounce_env import BounceObjectEnv, Program, ONLY_SELF_SCORE, SELF_MINUS_HALF_OPPO
 from autograde.rl_envs.wrappers import ResizeFrame
 
-def get_env_fn(program, reward_type, reward_shaping, num_ball_to_win, max_steps=1000, finish_reward=0):
+def get_env_fn(program, reward_type, reward_shaping, num_ball_to_win, max_steps=1000, finish_reward=0, no_neg_finish=False):
     # we add all necessary wrapper here
     def make_env():
         env = BounceObjectEnv(program, reward_type, reward_shaping, num_ball_to_win=num_ball_to_win,
-                             finish_reward=finish_reward)
+                             finish_reward=finish_reward, no_neg_finish=no_neg_finish)
         env = TimeLimit(env, max_episode_steps=max_steps)  # 20 seconds  # no skipping, it should be 3000. With skip, do 3000 / skip.
         return env
 
@@ -28,8 +28,8 @@ def get_env_fn(program, reward_type, reward_shaping, num_ball_to_win, max_steps=
 
 
 def make_general_env(program, frame_stack, num_envs, reward_type, reward_shaping, num_ball_to_win, max_steps,
-                     finish_reward):
-    base_env_fn = get_env_fn(program, reward_type, reward_shaping, num_ball_to_win, max_steps, finish_reward)
+                     finish_reward, no_neg_finish):
+    base_env_fn = get_env_fn(program, reward_type, reward_shaping, num_ball_to_win, max_steps, finish_reward, no_neg_finish)
 
     if num_envs > 1:
         env = SubprocVecEnv([base_env_fn for _ in range(num_envs)])
@@ -116,7 +116,7 @@ def train():
 
     import wandb
     wandb.init(sync_tensorboard=True, project="autograde-bounce",
-               name="obj_self_minus_oppo_n256_3balls",
+               name="obj_self_minus_oppo_n256_2balls_pos_finish_100",
                config=hyperparams)
 
     program = Program()
@@ -130,7 +130,7 @@ def train():
 
     with tf.Session(config=config):
         checkpoint_callback = CheckpointCallback(save_freq=100000,
-                                                 save_path="./saved_models/obj_self_minus_oppo_n256_3balls/",
+                                                 save_path="./saved_models/obj_self_minus_oppo_n256_2balls_pos_finish_100/",
                                                  name_prefix="ppo2_mlp_lstm")
 
         # turns out, 3 balls to win is important
@@ -138,22 +138,22 @@ def train():
         # just on 1 ball, trajectory terminates afterwards. LSTM won't know what to do because init state is no longer
         # there
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=hyperparams['reward_shaping'],
-                               num_ball_to_win=3,
-                               max_steps=hyperparams['max_steps'], finish_reward=0)
+                               num_ball_to_win=2,
+                               max_steps=hyperparams['max_steps'], finish_reward=100, no_neg_finish=True)
         model = PPO2(hyperparams['policy_type'], env, n_steps=hyperparams['n_steps'],
                      learning_rate=hyperparams['learning_rate'], gamma=0.99,
                      verbose=1, nminibatches=4, tensorboard_log="./obj_self_minus_oppo_n256_3balls/")
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO,
-                                      reward_shaping=hyperparams['reward_shaping'], num_ball_to_win=3,
-                                      max_steps=hyperparams['max_steps'], finish_reward=0)
+                                      reward_shaping=hyperparams['reward_shaping'], num_ball_to_win=2,
+                                      max_steps=hyperparams['max_steps'], finish_reward=100, no_neg_finish=True)
         mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
 
         print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
         # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
-        model.learn(total_timesteps=3000000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
+        model.learn(total_timesteps=6000000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
 
         model.save("./saved_models/obj_self_minus_oppo_n256_3balls")
 
@@ -161,7 +161,7 @@ def train():
         # recurrent policy, no stacking!
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO,
                                       reward_shaping=hyperparams['reward_shaping'], num_ball_to_win=3,
-                                      max_steps=hyperparams['max_steps'], finish_reward=0)
+                                      max_steps=hyperparams['max_steps'], finish_reward=0, no_neg_finish=False)
         # AssertionError: You must pass only one environment when using this function
         # But then, the NN is expecting shape of (8, ...)
         mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
