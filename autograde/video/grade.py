@@ -20,6 +20,7 @@ from collections import defaultdict
 
 from autograde.video.build_dataset import RLController
 
+OBJ_RL_MODEL_PATH = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256/ppo2_cnn_lstm_retrain4_1600000_steps.zip"
 
 def evaluate_on_rewards_and_values(n, skip, obj):
     # this is play-to-grade reward collector
@@ -35,7 +36,7 @@ def evaluate_on_rewards_and_values(n, skip, obj):
         model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
                            "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
     else:
-        model_file = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256.zip"
+        model_file = OBJ_RL_MODEL_PATH  # "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256.zip"
 
     rlc = RLController(model_file, n_train_env=8, obj=obj)
 
@@ -119,7 +120,7 @@ def evaluate_on_tail(obj):
         model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
                            "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
     else:
-        model_file = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256.zip"
+        model_file = OBJ_RL_MODEL_PATH # "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256.zip"
 
     rlc = RLController(model_file, n_train_env=8, obj=obj)
 
@@ -267,7 +268,7 @@ def gen_traj_for_correct_program_rewards_and_values(obj=False):
     rlc.load_model()
 
     save_stats_dir = './reference_eval_reward_value_stats_correct_programs_8_theme_15_speed/' if not obj else "./reference_eval" \
-                                                  "_reward_obj_value_stats_correct_programs_8_theme_15_speed/"
+                                                  "_reward_value_stats_obj_correct_programs_8_theme_15_speed/"
     os.makedirs(save_stats_dir, exist_ok=True)
 
     # each program we run 8 times (24 + 8) = 32
@@ -387,6 +388,6 @@ def gen_traj_for_reference_broken_program_rewards_and_values(obj=False):
 if __name__ == '__main__':
     pass
     # run_evaluate_on_rewards_and_values()
-    # gen_traj_for_correct_program_rewards_and_values(obj=True)
-    gen_traj_for_reference_broken_program_rewards_and_values(obj=True)
+    gen_traj_for_correct_program_rewards_and_values(obj=True)   # ref correct
+    # gen_traj_for_reference_broken_program_rewards_and_values(obj=True)  # ref broken
     # evaluate_on_tail()

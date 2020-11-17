@@ -615,13 +615,13 @@ def play_to_grade_test():
         print(reward, value, done)
 
 
+# TODO: run this before bed tonight!
 def generate_ref_program_videos():
     # broken: 10 programs
     # correct: 8 themes programs + 25 speed programs
 
     # we want probably 5000 correct videos, 5000 broken videos
     # but for now, let's do 1000, 1000
-
 
     pass
 

@@ -111,7 +111,7 @@ def train():
         "n_steps": 256, # 256,
         'learning_rate': 5e-4, # 5e-4,
         'max_steps': 1000,
-        'policy_type': 'MlpLnLstmPolicy' # 'CnnLstmPolicy'
+        'policy_type': 'MlpLstmPolicy' # 'CnnLstmPolicy'
     }
 
     import wandb
@@ -133,8 +133,10 @@ def train():
                                                  save_path="./saved_models/obj_self_minus_oppo_n256/",
                                                  name_prefix="ppo2_cnn_lstm_retrain4")
 
+        # turns out, 2 balls to win is important
+        # otherwise the LSTM won't work.
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=hyperparams['reward_shaping'],
-                               num_ball_to_win=1,
+                               num_ball_to_win=2,
                                max_steps=hyperparams['max_steps'], finish_reward=0)
         model = PPO2(hyperparams['policy_type'], env, n_steps=hyperparams['n_steps'],
                      learning_rate=hyperparams['learning_rate'], gamma=0.99,
@@ -142,14 +144,14 @@ def train():
 
         # Eval first to make sure we can eval this...(otherwise there's no point in training...)
         single_env = make_general_env(program, 1, 1, SELF_MINUS_HALF_OPPO,
-                                      reward_shaping=hyperparams['reward_shaping'], num_ball_to_win=1,
+                                      reward_shaping=hyperparams['reward_shaping'], num_ball_to_win=2,
                                       max_steps=hyperparams['max_steps'], finish_reward=0)
         mean_reward, std_reward = evaluate_ppo_policy(model, single_env, n_training_envs=8, n_eval_episodes=10)
 
         print("initial model mean reward {}, std reward {}".format(mean_reward, std_reward))
 
         # model.learn(total_timesteps=1000 * 5000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
-        model.learn(total_timesteps=2000000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
+        model.learn(total_timesteps=3000000, callback=CallbackList([checkpoint_callback]), tb_log_name='PPO2')
 
         model.save("./saved_models/obj_self_minus_oppo_n256")
 
