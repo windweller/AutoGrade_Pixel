@@ -263,7 +263,7 @@ def gen_traj_for_correct_program_rewards_and_values(obj=False):
         model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
                            "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
     else:
-        model_file = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256.zip"
+        model_file = OBJ_RL_MODEL_PATH
 
     rlc = RLController(model_file, n_train_env=8, obj=obj)
     rlc.load_model()
@@ -354,7 +354,7 @@ def gen_traj_for_reference_broken_program_rewards_and_values(obj=False):
         model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
                            "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
     else:
-        model_file = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256.zip"
+        model_file = OBJ_RL_MODEL_PATH
 
     rlc = RLController(model_file, n_train_env=8, obj=obj)
     rlc.load_model()
