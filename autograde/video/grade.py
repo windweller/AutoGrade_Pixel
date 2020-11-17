@@ -127,7 +127,7 @@ def evaluate_on_tail(obj):
 
     program_folder = pjoin(pathlib.Path(__file__).parent.parent.absolute(), "envs/bounce_programs")
 
-    save_stats_dir = './eval_reward_value_stats_500_sampled_tail/' if not obj else "eval_reward_value_stats_obj_500_sampled_tail"
+    save_stats_dir = './eval_reward_value_stats_500_sampled_tail/' if not obj else "eval_reward_value_stats_obj_500_sampled_tail/"
     os.makedirs(save_stats_dir, exist_ok=True)
 
     start = time.time()
@@ -342,18 +342,23 @@ def gen_traj_for_correct_program_rewards_and_values(obj=False):
     print("Totally took {} secs".format(time.time() - start))
 
 
-def gen_traj_for_reference_broken_program_rewards_and_values():
+def gen_traj_for_reference_broken_program_rewards_and_values(obj=False):
     # 10 broken programs
     # so need to run 8 * 3 times...to create a balanced dataset
 
     # 8 * 2 instead
 
-    model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
-                       "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
-    rlc = RLController(model_file, n_train_env=8)
+    if not obj:
+        model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
+                           "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+    else:
+        model_file = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256.zip"
+
+    rlc = RLController(model_file, n_train_env=8, obj=obj)
     rlc.load_model()
 
-    save_stats_dir = './reference_eval_reward_value_stats_broken_10_programs_2rounds/'
+    save_stats_dir = './reference_eval_reward_value_stats_broken_10_programs_2rounds/' if not obj else \
+                    './reference_eval_reward_value_stats_obj_broken_10_programs_2rounds/'
     os.makedirs(save_stats_dir, exist_ok=True)
 
     pbar = tqdm(total=10)
@@ -382,6 +387,6 @@ def gen_traj_for_reference_broken_program_rewards_and_values():
 if __name__ == '__main__':
     pass
     # run_evaluate_on_rewards_and_values()
-    gen_traj_for_correct_program_rewards_and_values(obj=True)
-    # gen_traj_for_reference_broken_program_rewards_and_values()
+    # gen_traj_for_correct_program_rewards_and_values(obj=True)
+    gen_traj_for_reference_broken_program_rewards_and_values(obj=True)
     # evaluate_on_tail()
