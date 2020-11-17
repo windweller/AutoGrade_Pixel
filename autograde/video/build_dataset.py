@@ -314,11 +314,15 @@ class RLController(object):
         program = Program()
         program.loads(program_json)
 
-        env = pixel_make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=3,
-                               max_steps=1500, finish_reward=100)
+        if not self.obj:
+            env = pixel_make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=2,
+                               max_steps=1000, finish_reward=100)
+        else:
+            env = obj_make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=False, num_ball_to_win=2,
+                                       max_steps=1000, finish_reward=100)
 
         env = VecVideoRecorder(env, "{}/{}".format(save_dir, program_label),
-                               record_video_trigger=lambda x: x == 0, video_length=1500,
+                               record_video_trigger=lambda x: x == 0, video_length=1000,
                                name_prefix="ppo2-{}".format(program_name))
 
         # We will collect the reward and then store in a text file
@@ -332,7 +336,7 @@ class RLController(object):
             done, state = False, None
             episode_reward = np.zeros(self.n_train_env)
 
-            for _ in tqdm(range(1500)):
+            for _ in tqdm(range(1000)):
                 # in this recording scheme, if an environment is terminated/done, it's automatically
                 # reset
                 action, state = self.model.predict(obs, state=state, deterministic=True)
@@ -611,7 +615,14 @@ def play_to_grade_test():
         print(reward, value, done)
 
 
-def play_to_grade_test_parallel():
+def generate_ref_program_videos():
+    # broken: 10 programs
+    # correct: 8 themes programs + 25 speed programs
+
+    # we want probably 5000 correct videos, 5000 broken videos
+    # but for now, let's do 1000, 1000
+
+
     pass
 
 if __name__ == '__main__':

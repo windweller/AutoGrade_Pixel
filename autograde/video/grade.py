@@ -250,19 +250,24 @@ def setup_speed_json_string(ball, paddle):
     return random_program_str.substitute(ball=ball, paddle=paddle)
 
 
-def gen_traj_for_correct_program_rewards_and_values():
+def gen_traj_for_correct_program_rewards_and_values(obj=False):
     # two things, one for themes (8 themes)
     # 25 speed settings
 
     # save each one.
     # this is a "parallel" situation...so we won't use this to construct Table 1 or 2.
 
-    model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
-                       "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
-    rlc = RLController(model_file, n_train_env=8)
+    if not obj:
+        model_file = pjoin(pathlib.Path(__file__).parent.parent.absolute(),
+                           "train/saved_models/bounce_ppo2_cnn_lstm_one_ball_mixed_theme/ppo2_cnn_lstm_default_mixed_theme_final.zip")
+    else:
+        model_file = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256.zip"
+
+    rlc = RLController(model_file, n_train_env=8, obj=obj)
     rlc.load_model()
 
-    save_stats_dir = './reference_eval_reward_value_stats_correct_programs_8_theme_15_speed/'
+    save_stats_dir = './reference_eval_reward_value_stats_correct_programs_8_theme_15_speed/' if not obj else "./reference_eval" \
+                                                  "_reward_obj_value_stats_correct_programs_8_theme_15_speed/"
     os.makedirs(save_stats_dir, exist_ok=True)
 
     # each program we run 8 times (24 + 8) = 32
@@ -376,7 +381,7 @@ def gen_traj_for_reference_broken_program_rewards_and_values():
 
 if __name__ == '__main__':
     pass
-    run_evaluate_on_rewards_and_values()
-    # gen_traj_for_correct_program_rewards_and_values()
+    # run_evaluate_on_rewards_and_values()
+    gen_traj_for_correct_program_rewards_and_values(obj=True)
     # gen_traj_for_reference_broken_program_rewards_and_values()
     # evaluate_on_tail()
