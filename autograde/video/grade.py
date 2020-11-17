@@ -20,7 +20,8 @@ from collections import defaultdict
 
 from autograde.video.build_dataset import RLController
 
-OBJ_RL_MODEL_PATH = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256/ppo2_cnn_lstm_retrain4_1600000_steps.zip"
+# OBJ_RL_MODEL_PATH = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256/ppo2_cnn_lstm_retrain4_1600000_steps.zip"
+OBJ_RL_MODEL_PATH = "/home/aimingnie/AutoGrade/saved_models/obj_self_minus_oppo_n256_3balls/ppo2_mlp_lstm_1600000_steps.zip"
 
 def evaluate_on_rewards_and_values(n, skip, obj):
     # this is play-to-grade reward collector

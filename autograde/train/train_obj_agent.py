@@ -110,7 +110,7 @@ def train():
         "reward_shaping": False, # False,
         "n_steps": 256, # 256,
         'learning_rate': 5e-4, # 5e-4,
-        'max_steps': 1000,
+        'max_steps': 1000,  # if doesn't work, we should increase to 1500
         'policy_type': 'MlpLstmPolicy' # 'CnnLstmPolicy'
     }
 
@@ -133,8 +133,10 @@ def train():
                                                  save_path="./saved_models/obj_self_minus_oppo_n256_3balls/",
                                                  name_prefix="ppo2_mlp_lstm")
 
-        # turns out, 2 balls to win is important
+        # turns out, 3 balls to win is important
         # otherwise the LSTM won't work.
+        # just on 1 ball, trajectory terminates afterwards. LSTM won't know what to do because init state is no longer
+        # there
         env = make_general_env(program, 1, 8, SELF_MINUS_HALF_OPPO, reward_shaping=hyperparams['reward_shaping'],
                                num_ball_to_win=3,
                                max_steps=hyperparams['max_steps'], finish_reward=0)
