@@ -28,7 +28,7 @@ def get_env_fn(program, reward_type, reward_shaping, num_ball_to_win, max_steps=
 
 
 def make_general_env(program, frame_stack, num_envs, reward_type, reward_shaping, num_ball_to_win, max_steps,
-                     finish_reward, no_neg_finish):
+                     finish_reward, no_neg_finish=False):
     base_env_fn = get_env_fn(program, reward_type, reward_shaping, num_ball_to_win, max_steps, finish_reward, no_neg_finish)
 
     if num_envs > 1:
