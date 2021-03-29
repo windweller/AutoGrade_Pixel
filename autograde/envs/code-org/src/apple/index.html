@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Apple</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        position: relative;
+        width: 320px;
+        height: 450px;
+        background-color: #fff;
+        overflow: hidden;
+      }
+
+      body > * {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+
+      button,
+      input {
+        box-sizing: border-box;
+        outline: none;
+        margin: 5px;
+        line-height: 1.2em;
+      }
+
+      button {
+        padding: 7px 12px;
+      }
+
+      input {
+        padding: 5px;
+      }
+
+      label {
+        padding: 2px;
+      }
+
+      span {
+        display: block;
+        color: #333;
+        font-size: 13px;
+        line-height: 18px;
+        overflow: hidden;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 默认 design component -->
+    <script>
+      window.$defaultCommonProps = {
+        borderWidth: 0,
+        borderColor: "#000000",
+        borderRadius: 0,
+        hidden: false,
+      };
+
+      window.$defaultInputProps = {
+        textColor: "#333333",
+        backgroundColor: "rgba(0, 0, 0, 0)",
+        // font family 忽略
+        fontSize: 14,
+        // left right center justify
+        textAlign: "left",
+        ...$defaultCommonProps,
+        depth: 1,
+      };
+
+      window.$components = [
+        {
+          id: "background",
+          width: 320,
+          height: 450,
+          x: 0,
+          y: 35,
+          image: "/// pic:bg ///",
+          // fill contain cover none
+          fit: "fill",
+          ...$defaultCommonProps,
+          depth: 0,
+        },
+        {
+          id: "apple",
+          width: 100,
+          height: 100,
+          x: 190,
+          y: 335,
+          image: "/// pic:apple ///",
+          // fill contain cover none
+          fit: "fill",
+          ...$defaultCommonProps,
+
+          depth: 1,
+        },
+        {
+          id: "score_description",
+          text: "Score:",
+          width: 49,
+          height: 19,
+          x: 5,
+          y: 5,
+          ...$defaultInputProps,
+        },
+        {
+          id: "score_label",
+          text: "0",
+          width: 31,
+          height: 21,
+          x: 55,
+          y: 5,
+          ...$defaultInputProps,
+        },
+        {
+          id: "lives_description",
+          text: "Lives:",
+          width: 44,
+          height: 19,
+          x: 215,
+          y: 5,
+          ...$defaultInputProps,
+        },
+        {
+          id: "lives_label",
+          text: "3",
+          width: 31,
+          height: 19,
+          x: 260,
+          y: 5,
+          ...$defaultInputProps,
+        },
+      ];
+    </script>
+    <!-- 渲染函数 -->
+    <script>
+      function run() {
+        draw();
+        requestAnimationFrame(() => {
+          run();
+        });
+      }
+
+      function draw() {
+        for (let component of $components) {
+          let dom = document.getElementById(component.id);
+
+          if (!dom) {
+            dom = document.createElement(component.type || "div");
+            dom.id = component.id;
+            document.body.append(dom);
+          }
+
+          if (component.text) {
+            if (component.textSetter) {
+              component.textSetter(dom, component.text);
+            } else {
+              dom.innerText = component.text;
+            }
+          }
+
+          Object.assign(dom.style, componentToCss(component));
+        }
+      }
+
+      function componentToCss({
+        width,
+        height,
+        x,
+        y,
+        textColor,
+        backgroundColor,
+        // font family 忽略
+        fontSize,
+        // left right center justify
+        textAlign,
+        borderWidth,
+        borderColor,
+        borderRadius,
+        hidden,
+        depth,
+        image,
+        // fill contain cover none
+        fit,
+      }) {
+        return {
+          ...(width !== undefined ? { width: width + "px" } : {}),
+          ...(height !== undefined ? { height: height + "px" } : {}),
+          ...(x !== undefined ? { left: x + "px" } : {}),
+          ...(y !== undefined ? { top: y + "px" } : {}),
+          ...(textColor !== undefined ? { color: textColor } : {}),
+          ...(backgroundColor !== undefined ? { backgroundColor } : {}),
+          ...(fontSize !== undefined ? { fontSize: fontSize + "px" } : {}),
+          ...(textAlign !== undefined ? { textAlign } : {}),
+          ...(borderWidth !== undefined
+            ? { borderWidth: borderWidth + "px" }
+            : {}),
+          ...(borderColor !== undefined ? { borderColor } : {}),
+          ...(borderRadius !== undefined
+            ? { borderRadius: borderRadius + "px" }
+            : {}),
+          ...(hidden ? { display: "none" } : {}),
+          ...(depth !== undefined ? { zIndex: depth } : {}),
+          ...(image !== undefined
+            ? { backgroundImage: `url("${image}")` }
+            : {}),
+          ...(fit !== undefined && fit !== "none"
+            ? { backgroundSize: fit === "fill" ? "100% 100%" : fit }
+            : {}),
+        };
+      }
+
+      // start
+      run();
+    </script>
+
+    <!-- 方法实现 UI controls -->
+    <script>
+      function onEvent(id, name, fn) {
+        document.getElementById(id).addEventListener(name, fn);
+      }
+
+      function button(id, text) {
+        $components.push({
+          ...$defaultCommonProps,
+          id,
+          type: "button",
+          text,
+          backgroundColor: "rgb(26, 188, 156)",
+          textColor: "#fff",
+          fontSize: 14,
+          depth: 3,
+        });
+      }
+
+      function textInput(id, text) {
+        $components.push({
+          ...$defaultCommonProps,
+          id,
+          type: "input",
+          text,
+          width: 200,
+          height: 30,
+          backgroundColor: "rgb(255, 255, 255)",
+          borderColor: "rgb(153, 153, 153)",
+          borderWidth: 1,
+          textColor: "#000",
+          fontSize: 14,
+          depth: 3,
+          textSetter: (dom, text) => (dom.value = text),
+          textGetter: (dom) => dom.value,
+        });
+      }
+
+      function textLabel(id, text) {
+        $components.push({
+          ...$defaultCommonProps,
+          id,
+          type: "label",
+          text,
+          textColor: "rgb(51, 51, 51)",
+          fontSize: 14,
+          depth: 3,
+        });
+      }
+
+      function getText(id) {
+        let component = $components.find((component) => component.id === id);
+
+        if (!component) {
+          console.log(
+            `The getText() id parameter refers to an id ("${id}") which does not exist.`
+          );
+          return;
+        }
+
+        let dom = document.getElementById(component.id);
+
+        if (component.textGetter) {
+          return component.textGetter(dom);
+        } else {
+          return dom.innerText;
+        }
+      }
+
+      function setText(id, text) {
+        let component = $components.find((component) => component.id === id);
+
+        if (!component) {
+          console.log(
+            `The setText() id parameter refers to an id ("${id}") which does not exist.`
+          );
+          return;
+        }
+
+        let dom = document.getElementById(component.id);
+        component.text = String(text);
+      }
+
+      function image(id, src) {
+        let img = new Image();
+
+        img.onload = ({ target }) => {
+          $components.push({
+            ...$defaultCommonProps,
+            id,
+            width: target.width,
+            height: target.height,
+            image: src,
+            // fill contain cover none
+            fit: "contain",
+            depth: 3,
+          });
+        };
+
+        img.src = src;
+      }
+
+      function showElement(id) {
+        let component = $components.find((component) => component.id === id);
+
+        if (!component) {
+          return;
+        }
+
+        component.hidden = false;
+      }
+
+      function hideElement(id) {
+        let component = $components.find((component) => component.id === id);
+
+        if (!component) {
+          return;
+        }
+
+        component.hidden = true;
+      }
+
+      function deleteElement(id) {
+        $components = $components.filter((component) => component.id !== id);
+      }
+
+      function setPosition(id, x, y, width, height) {
+        let component = $components.find((component) => component.id === id);
+
+        if (!component) {
+          return;
+        }
+
+        Object.assign(component, {
+          x,
+          y,
+          ...(width !== undefined ? { width } : {}),
+          ...(height !== undefined ? { height } : {}),
+        });
+      }
+
+      function setSize(id, width, height) {
+        let component = $components.find((component) => component.id === id);
+
+        if (!component) {
+          return;
+        }
+
+        Object.assign(component, { width, height });
+      }
+
+      function write(text) {
+        $components.push({
+          ...$defaultCommonProps,
+          id: Date.now(),
+          type: "span",
+          text,
+          depth: 3,
+        });
+      }
+    </script>
+
+    <!-- 方法实现 Math -->
+    <script>
+      function randomNumber(minNum, maxNum) {
+        if (maxNum === undefined) {
+          maxNum = minNum;
+          minNum = 0;
+        }
+
+        return parseInt(Math.random() * (maxNum - minNum + 1) + minNum, 10);
+      }
+    </script>
+
+    <script>
+      /// user:script ///
+    </script>
+
+    <script>
+      window.$getComponents = () => {
+        return {
+          components: $components.map((component) => ({
+            ...component,
+            image: undefined,
+          })),
+          matched: Array(20)
+            .fill(undefined)
+            .map((_, index) => (getMatched(index) ? index : undefined))
+            .filter((item) => item !== undefined),
+        };
+      };
+
+      function getMatched(grid) {
+        // 4 * 5
+        let x = grid % 4;
+        let y = Math.floor(grid / 4);
+
+        let gridStartX = x * 80;
+        let gridStartY = y * 90;
+        let gridEndX = (x + 1) * 80;
+        let gridEndY = (y + 1) * 90;
+
+        let apple = $components.find((item) => item.id === "apple");
+
+        return (
+          gridStartX <= apple.x + +apple.width &&
+          gridStartY <= apple.y + +apple.height &&
+          apple.x <= gridEndX &&
+          apple.y <= gridEndY
+        );
+      }
+    </script>
+  </body>
+</html>

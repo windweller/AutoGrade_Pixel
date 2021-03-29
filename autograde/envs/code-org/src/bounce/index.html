@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Bounce</title>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@code-dot-org/p5@0.5.4-cdo.4/lib/p5.js"
+      integrity="sha256-f4kXpouQj0sK1XHV8RZ9q7TTdwN2/ZDf1NWCZlukdDQ="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@code-dot-org/p5.play@1.3.12-cdo/lib/p5.play.js"
+      integrity="sha256-8F5JCVZQQ24WOP0AM8k58k/nRd+qEc84YTn0TzC2h7w="
+      crossorigin="anonymous"
+    ></script>
+    <style>
+      * {
+        margin: 0px;
+        padding: 0px;
+        width: 400px;
+        height: 400px;
+      }
+    </style>
+  </head>
+  <body class="">
+    <div id="bounceDom"></div>
+    <script>
+      window.$defaultFrames = Infinity;
+      window.$frames = $defaultFrames;
+      window.score_1 = 0;
+      window.score_2 = 0;
+      window.$data = JSON.parse(`/// user:script ///`);
+      window.activeSketch;
+
+      window.onload = function () {
+        activeSketch = new p5("", bounceDom);
+
+        fetch(
+          "https://cdn.jsdelivr.net/npm/@code-dot-org/p5@0.5.4-cdo.4/lib/p5.js"
+        ).then(() => {
+          fetch(
+            "https://cdn.jsdelivr.net/npm/@code-dot-org/p5.play@1.3.12-cdo/lib/p5.play.js"
+          ).then(() => {
+            playCode();
+          });
+        });
+      };
+
+      function playCode() {
+        let runnable = `/// wrapper:script ///`
+          .replace(
+            /(function([\s]+)draw([\s])*\(\)([\s])*\{)/g,
+            `$1
+            if (window.$frames === 0) {
+              updateSprites(false)
+              return;
+            } else {
+              updateSprites(true)
+              window.$frames -= 1;
+            }
+          `
+          )
+          .replace(/(var\s)/g, "");
+
+        let [, setupCode] = runnable.match(/([\s\S]*)(function draw)/);
+
+        runnable = runnable.slice(setupCode.length);
+
+        activeSketch.remove();
+        activeSketch = new p5((p) => {
+          with (p) {
+            eval(runnable);
+          }
+
+          window.$p = p;
+
+          [
+            "preload",
+            "setup",
+            "draw",
+            "keyPressed",
+            "keyReleased",
+            "keyTyped",
+            "mouseMoved",
+            "mouseDragged",
+            "mousePressed",
+            "mouseReleased",
+            "mouseClicked",
+            "touchStarted",
+            "touchMoved",
+            "touchEnded",
+          ].forEach(function (f) {
+            if (
+              new RegExp(`function([\\s]+)${f}([\\s])*\\(\\)`, "g").test(
+                runnable
+              )
+            ) {
+              with (p) {
+                p[f] = eval(f);
+              }
+            }
+          });
+
+          with (p) {
+            p["preload"] = preload;
+            p["setup"] = function setup() {
+              createCanvas(400, 400);
+
+              with (p) {
+                hardcourt_bg = loadImage(
+                  "https://i.loli.net/2021/01/23/Oxf4EaotDA8z5ji.png"
+                );
+                retro_bg = loadImage(
+                  "https://i.loli.net/2021/01/23/328LQyIWdmxPFzN.png"
+                );
+
+                eval(setupCode);
+              }
+            };
+
+            function preload() {
+              p["_predefinedSpriteAnimations"] = {
+                hardcourt_ball: loadAnimation(
+                  loadSpriteSheet(
+                    "https://i.loli.net/2021/01/24/8WNVDk2tnK6jbaO.png",
+                    [
+                      {
+                        name: "hardcourt_ball",
+                        frame: { x: 0, y: 0, width: 28, height: 28 },
+                      },
+                    ]
+                  )
+                ),
+                retro_ball: loadAnimation(
+                  loadSpriteSheet(
+                    "https://i.loli.net/2021/01/24/MdLiRsgkDGj6ovq.png",
+                    [
+                      {
+                        name: "retro_ball",
+                        frame: { x: 0, y: 0, width: 28, height: 28 },
+                      },
+                    ]
+                  )
+                ),
+                hardcourt_paddle: loadAnimation(
+                  loadSpriteSheet(
+                    "https://i.loli.net/2021/01/24/oDt3VmPp6GLgdOc.png",
+                    [
+                      {
+                        name: "hardcourt_paddle",
+                        frame: { x: 0, y: 0, width: 44, height: 18 },
+                      },
+                    ]
+                  )
+                ),
+                retro_paddle: loadAnimation(
+                  loadSpriteSheet(
+                    "https://i.loli.net/2021/01/24/JDMQYAdtOLPsk9l.png",
+                    [
+                      {
+                        name: "retro_paddle",
+                        frame: { x: 0, y: 0, width: 44, height: 18 },
+                      },
+                    ]
+                  )
+                ),
+              };
+            }
+          }
+        }, bounceDom);
+      }
+    </script>
+    <!-- 方法实现 Math -->
+    <script>
+      function randomNumber(minNum, maxNum) {
+        if (maxNum === undefined) {
+          maxNum = minNum;
+          minNum = 0;
+        }
+
+        return parseInt(Math.random() * (maxNum - minNum + 1) + minNum, 10);
+      }
+    </script>
+    <script>
+      window.$getComponents = function () {
+        return {
+          sprites: activeSketch.allSprites.map((sprite) => ({
+            animationLabel: sprite.getAnimationLabel(),
+            x: sprite.x,
+            y: sprite.y,
+            width: sprite.width,
+            height: sprite.height,
+          })).filter(item => !!item.animationLabel),
+          scores: [score_1, score_2]
+        };
+      };
+
+      window.$runFrames = function () {
+        window.$frames = window.$defaultFrames;
+
+        return new Promise((resolve) => {
+          function req() {
+            requestAnimationFrame(() => {
+              if (window.$frames > 0) {
+                req();
+              } else {
+                resolve();
+              }
+            });
+          }
+
+          req();
+        });
+      };
+    </script>
+  </body>
+</html>
