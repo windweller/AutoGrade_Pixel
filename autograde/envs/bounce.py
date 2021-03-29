@@ -1212,6 +1212,7 @@ class Bounce(object):
     def act(self, action):
         assert action in self.action_cmds, "need to supply correct action command: {}".format(self.action_cmds)
 
+        # probably execute this at creation or at reset...not inside here
         if self.fresh_run:
             self.when_run_execute()
             self.fresh_run = False
